@@ -1,61 +1,83 @@
-let flash = false;
-let flashFrames = 0;
-const flashColor = [255, 0, 0];
-const flashDuration = 2;
-
-// TODO: Add and import "note" helper to Square.
-// TODO: Add "attack" and "velocity" and "pan" to Square.
-// TODO: Add volume to trigger from this file.
+// TODO: Add named parameters to square.
+//  - Can default parameters be random? YES
+//  - What should they be set to?
+// TODO: Remove potential delay from sound starting up?
 // TODO: Add a sampler so that arbitrary sounds can be loaded and played back with sound.play("name", pitch).for(3, sound.beats)
 // TODO: Clean up audio code & api.
 // See also: https://www.notion.so/whistlegraph/Get-a-basic-sound-working-and-playing-notes-in-a-sequence-fb0020def4b84c69805b497b31981b9c
 // TODO: Move on to graphics.
 // TODO: Make an "index" disk that gets booted before any remote disks. (Can just be a timed intro for now.)
+// TODO: Global ESC menu.
+// TODO: Video underlay
 
-const notes = {
-  // C-Major scale
-  c4: 261.63,
-  d4: 293.66,
-  e4: 329.63,
-  f4: 349.23,
-  g4: 392.0,
-  a4: 440.0,
-  b4: 493.88,
-  c5: 523.25,
-};
+// TODO: Color readable spots in Camera that forces you to move.
 
-const melody = "cccdecdefg";
+let flash = false;
+const flashColor = [255, 0, 0];
+
+const melody = ["c4", "c4", "c4", "d4", "e4", "c4", "d4", "e4", "f4", "g4"];
 let melodyIndex = 0;
+
+let square;
+
+let firstBeat = true;
 
 // 💗 Beat
 export function beat($api) {
   const { num, help, sound } = $api;
 
-  console.log("🎼 BPM:", sound.bpm[0], "Seconds passed:", sound.time);
+  console.log("🎼 BPM:", sound.bpm(), "Time:", sound.time.toFixed(2));
 
-  if (help.choose(true, false)) {
-    sound.bpm[0] = help.choose(90, 120, 180, 240, 400); // TODO: Why can't the BPM be changed?
-  }
+  sound.bpm(200);
 
-  sound.square(
-    //notes[melody[melodyIndex] + "4"],
-    notes[help.choose("c4", "d4", "e4", "f4", "g4", "a4", "b4", "c5")],
-    help.choose(1, 1 / 2, 1 / 4, 1 / 8)
+  square = sound.square(
+    melody[melodyIndex],
+    1 / 2,
+    0.01,
+    0.9,
+    1, // volume
+    1
   );
 
-  melodyIndex = (melodyIndex + 1) % melody.length;
+  sound.square(
+    200,
+    1 / 8,
+    0.01,
+    0.9,
+    1, // volume
+    -1
+  );
 
-  // TODO: Should this state be calculated in update?
+  // sound.square({tone: "c4", beats: 1, attack: 0.01, decay: 0.9, volume: 0, pan: 0});
   flash = true;
-  flashColor[0] = num.randInt(255);
-  flashColor[1] = num.randInt(255);
-  flashColor[2] = num.randInt(255);
+  flashColor[0] = 255;
+  flashColor[1] = 255;
+  flashColor[2] = 255;
+
+  firstBeat = false;
+
+  melodyIndex = (melodyIndex + 1) % melody.length;
 }
 
 // 🧮 Crunch
 export function update($api) {
-  // TODO: Play a sound here!
   //console.log($api)
+  const { sound } = $api;
+
+  if (square) {
+    // Calculate progress of square.
+    const p = square.progress(sound.time);
+
+    // Get sample of square's amplitude:
+    // const a = square.amplitude;
+    // TODO: Graph it somehow.
+
+    flashColor.fill(Math.floor((1 - p) * 255), 0, 2);
+
+    if (p === 1) {
+      flash = false; // TODO: This might be skipping 1 frame.
+    }
+  }
 }
 
 // 🎨 Paint
@@ -64,14 +86,8 @@ export function render($api) {
 
   if (flash) {
     color(...flashColor);
-
-    flashFrames += 1;
-    if (flashFrames > flashDuration) {
-      flash = false;
-      flashFrames = 0;
-    }
   } else {
-    color(0, 0, 255);
+    color(0, 0, 100);
   }
 
   clear();

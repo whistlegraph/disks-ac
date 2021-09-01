@@ -8,20 +8,25 @@ let frameCount = 0;
 const stars = {
   x: Array(numStars),
   y: Array(numStars),
-  z: Array(numStars)
+  z: Array(numStars),
 };
 
 for (let i = 0; i < numStars; i += 1) {
   reset(i);
 }
 
+// 💗 Beat
+export function beat($api) {
+  const { num, help, sound } = $api;
+}
+
 // 🧮 Update
 export function update($api) {
   const { screen, load } = $api;
   ({ width, height } = screen);
- 
+
   frameCount += 1;
-  if (frameCount === 30) {
+  if (frameCount === 300) {
     load("doodle"); // TODO: How to implement loading screens?
   }
 
@@ -68,6 +73,6 @@ function projection(i) {
   const halfHeight = height / 2;
   return [
     Math.floor((stars.x[i] / stars.z[i]) * halfWidth + halfWidth),
-    Math.floor((stars.y[i] / stars.z[i]) * halfHeight + halfHeight)
+    Math.floor((stars.y[i] / stars.z[i]) * halfHeight + halfHeight),
   ];
 }

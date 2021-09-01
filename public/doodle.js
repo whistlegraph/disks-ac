@@ -3,6 +3,12 @@ let points = [];
 let curX, curY;
 let firstFrame = true;
 
+// 💗 Beat
+// TODO: Make beat unnecessary?
+export function beat($api) {
+  const { num, help, sound } = $api;
+}
+
 // 🧮 Update
 export function update($api) {
   const { pen, num, load } = $api;
@@ -24,19 +30,16 @@ export function update($api) {
       }
     }
   } else if (points.length > 0) {
-    
     // TODO: Play a sound here.
     // whistle.note(12);
-    // whistle.pop(50); 
-    
+    // whistle.pop(50);
     // If we stopped drawing after points have been added to.
     // points = [];
   }
-  
+
   if (points.length > 20) {
     load("starfield");
   }
-  
 }
 
 // 🎨 Render
@@ -54,8 +57,8 @@ export function render($api) {
 
   // TODO: THIS SHOULD NOT BE HERE
   //if (pen.changed) {
-    color(...bgColor);
-    clear();
+  color(...bgColor);
+  clear();
   //}
 
   if (points.length >= 1) {
@@ -70,8 +73,8 @@ export function render($api) {
     // Points
     color(255, 255, 255);
     for (let i = 0; i < points.length; i += 1) {
-      const x = points[i][0] + -1 + num.randInt(2); 
-      const y = points[i][1] + -1 + num.randInt(2); 
+      const x = points[i][0] + -1 + num.randInt(2);
+      const y = points[i][1] + -1 + num.randInt(2);
       plot(x, y);
       //plot(...points[i]);
     }
