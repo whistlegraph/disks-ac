@@ -6,6 +6,10 @@
 // TODO: Clean up audio code & api.
 // See also: https://www.notion.so/whistlegraph/Get-a-basic-sound-working-and-playing-notes-in-a-sequence-fb0020def4b84c69805b497b31981b9c
 // TODO: Move on to graphics.
+
+// -- Add basic 3d features.
+// -- Add drawing editor.
+
 // TODO: Make an "index" disk that gets booted before any remote disks. (Can just be a timed intro for now.)
 // TODO: Global ESC menu.
 // TODO: Video underlay
@@ -30,25 +34,24 @@ export function beat($api) {
 
   sound.bpm(200);
 
-  square = sound.square(
-    melody[melodyIndex],
-    1 / 2,
-    0.01,
-    0.9,
-    1, // volume
-    1
-  );
+  square = sound.square({
+    tone: melody[melodyIndex],
+    beats: 1 / 2,
+    attack: 0.01,
+    decay: 0.9,
+    volume: 1,
+    pan: 1,
+  });
 
-  sound.square(
-    200,
-    1 / 8,
-    0.01,
-    0.9,
-    1, // volume
-    -1
-  );
+  sound.square({
+    tone: 200,
+    beats: 1 / 8,
+    attack: 0.01,
+    decay: 0.9,
+    volume: 1,
+    pan: -1,
+  });
 
-  // sound.square({tone: "c4", beats: 1, attack: 0.01, decay: 0.9, volume: 0, pan: 0});
   flash = true;
   flashColor[0] = 255;
   flashColor[1] = 255;
