@@ -1,14 +1,21 @@
-// TODO: Add named parameters to square.
-//  - Can default parameters be random? YES
-//  - What should they be set to?
-// TODO: Remove potential delay from sound starting up?
-// TODO: Add a sampler so that arbitrary sounds can be loaded and played back with sound.play("name", pitch).for(3, sound.beats)
-// TODO: Clean up audio code & api.
-// See also: https://www.notion.so/whistlegraph/Get-a-basic-sound-working-and-playing-notes-in-a-sequence-fb0020def4b84c69805b497b31981b9c
 // TODO: Move on to graphics.
-
 // -- Add basic 3d features.
 // -- Add drawing editor.
+
+// TODO: Add other wavetypes to square and rename it to tone.
+// *NOW* Rename square to tone and give it a "square" parameter.
+
+// TODO: Make tone's default parameters random.
+
+// TODO: Add and load documentation into this file for 'tone'.
+
+// TODO: Add a sampler so that arbitrary sounds can be loaded and played back with sound.play("name", pitch).for(3, sound.beats)
+
+// TODO: Remove potential delay from sound starting up?
+// TODO: Make sound start-up optional?
+// TODO: Clean up audio code & api.
+
+// See also: https://www.notion.so/whistlegraph/Get-a-basic-sound-working-and-playing-notes-in-a-sequence-fb0020def4b84c69805b497b31981b9c
 
 // TODO: Make an "index" disk that gets booted before any remote disks. (Can just be a timed intro for now.)
 // TODO: Global ESC menu.
@@ -21,9 +28,7 @@ const flashColor = [255, 0, 0];
 
 const melody = ["c4", "c4", "c4", "d4", "e4", "c4", "d4", "e4", "f4", "g4"];
 let melodyIndex = 0;
-
 let square;
-
 let firstBeat = true;
 
 // 💗 Beat

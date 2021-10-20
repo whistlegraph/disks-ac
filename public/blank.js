@@ -1,6 +1,11 @@
+// 💗 Beat
+export function beat($api) {
+  // TODO: Play a sound here!
+}
+
 // 🧮 Update
 export function update($api) {
-  // TODO: Play a sound here!
+  // TODO: Move a  ball here!
 }
 
 // 🎨 Render
