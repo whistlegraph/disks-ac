@@ -286,7 +286,7 @@ export function paint({
       const w = beatUnit * play.duration;
 
       // Draw darker boxes.
-      if (plays.length > 1) {
+      if (plays.length > 1 && play.duration === 1) {
         const dark = blocksColors[note.letter].map((n) => lerp(0, n, 0.5));
         color(...dark);
         const playProgress = playCount / plays.length;
