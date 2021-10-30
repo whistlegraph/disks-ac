@@ -227,10 +227,8 @@ export function paint({
   // 3. Timeline
   const playHeight = Math.max(3, height * 0.02);
   const playY = height - playHeight;
-
   const notesHeight = Math.max(3, height * 0.06);
   const notesY = playY - notesHeight;
-
   const indicatorHeight = Math.max(1, height * 0.005);
 
   // Draw black line in the background.
@@ -295,7 +293,6 @@ export function paint({
   // Draw song progress, offset by 1 to match the play progress.
   if (noteIndex >= 0 && songFinished === false) {
     // Light indicator.
-
     if (indicatorBlink < indicatorBlinkRate / 2) {
       color(0, 0, 0);
     } else {
@@ -359,7 +356,7 @@ export function beat({
     playingLetter = letter;
 
     // If we are looping, then reset melodyBeatsPlayed.
-    if (noteIndex === 0 && playIndex === 0) {
+    if (noteIndex === 0 && playIndex === 0 && playDurationProgress === 0) {
       melodyBeatsPlayed = 0;
     }
 
