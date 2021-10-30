@@ -1,3 +1,4 @@
+// TODO: Add space for breaks.
 // TODO: Make number of notes, colors, and tones programmable.
 // TODO: Add more sounds.
 
@@ -196,8 +197,7 @@ export function paint({
   box,
 }) {
   // if (freezeFrame === true) return false;
-  const songFinished =
-    melodyBeatsPlayed === melodyBeatsTotal && instrumentProgress === 1;
+  const songFinished = melodyBeatsPlayed === melodyBeatsTotal + 1;
 
   // 1. Background
   if (needsFlash) {
@@ -266,7 +266,18 @@ export function paint({
 
         // color(...shift);
         // TODO: Re-enable this once the bugs are fixed.
-        color(...blocksColors[note.letter]);
+
+        if (currentDuration === 0) {
+          color(...blocksColors[note.letter]);
+        } else {
+          const breakColor = blocksColors[note.letter].map((n) =>
+            lerp(n, 96, 1.0)
+          );
+          color(...breakColor);
+        }
+
+        //color(...blocksColors[note.letter]);
+
         box(startX + beatUnit * currentDuration, notesY, beatUnit, notesHeight);
 
         currentDuration += 1;
@@ -327,11 +338,11 @@ export function beat({
 
   if (noteIndex < 0) {
     square({
-      tone: 10,
+      tone: 50 - Math.abs(noteIndex * 10),
       beats: 0.05,
       attack: 0.1,
       decay: 0.1,
-      volume: 2.0,
+      volume: 0.7,
       pan: 0,
     });
     cam.forward(2);
@@ -364,14 +375,16 @@ export function beat({
     if (playIndex < plays.length) {
       if (playDurationProgress === 0) {
         // Play a note.
+
         instrument = square({
           tone: scale[letter],
-          beats: play.duration,
+          beats: 1, //play.duration,
           attack: 0.01,
           decay: 0.9,
           volume: 1,
           pan: 0,
         });
+
         // console.log("Playing:", letter, "Duration:", plays[playIndex]);
 
         // Reset all blocks.
@@ -463,7 +476,7 @@ export function beat({
       beats: 0.05,
       attack: 0.1,
       decay: 0.1,
-      volume: 2.0,
+      volume: 0.8,
       pan: 0,
     });
   }
@@ -491,8 +504,8 @@ export function beat({
   // E: Final Sound
   if (noteIndex === notes.length + 1) {
     square({
-      tone: 20,
-      beats: 0.1,
+      tone: 25,
+      beats: 0.2,
       attack: 0.01,
       decay: 0.01,
       volume: 1.5,
@@ -500,7 +513,7 @@ export function beat({
     });
     each(blocks, (b) => (b.alpha = 0));
     noteIndex += 1;
-
+    melodyBeatsPlayed += 1;
     return;
   }
 }
