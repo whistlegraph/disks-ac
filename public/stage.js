@@ -110,7 +110,7 @@ export function boot({
   BPM = params.get("bpm") || BPM;
 
   // Change from default melody
-  melody = params.get("melody") || melody;
+  melody = params.get("melody").replace(/\s/g, "") || melody;
   notes = parseMelody(melody);
   melodyBeatsTotal = melody.length;
 
@@ -123,14 +123,13 @@ export function boot({
 
   const aspectRatio = screen.width / screen.height;
 
-  cam.z = camZ; // TODO: Currently hardcoded to 16x9 aspect ratio.
-  /*
-  if (aspectRatio < 1) {
+  if (aspectRatio < 1.1) {
     cam.z = 14 / aspectRatio;
+  } else if (aspectRatio < 1.5) {
+    cam.z = 12;
   } else {
-    cam.z = 12 + aspectRatio;
+    cam.z = camZ; // TODO: Currently hardcoded to 16x9 aspect ratio.
   }
-  */
 
   for (const l of "ABCDEFG") // Add each colored block.
     blocks[l] = new Form(
@@ -196,15 +195,14 @@ export function paint({
   box,
 }) {
   // if (freezeFrame === true) return false;
-
   const songFinished =
     melodyBeatsPlayed === melodyBeatsTotal && instrumentProgress === 1;
 
   // 1. Background
   if (needsFlash) {
-    const r = lerp(flashColor[0], 72, 0.65);
-    const g = lerp(flashColor[1], 72, 0.65);
-    const b = lerp(flashColor[2], 72, 0.65);
+    const r = lerp(flashColor[0], 72, 0.85);
+    const g = lerp(flashColor[1], 72, 0.85);
+    const b = lerp(flashColor[2], 72, 0.85);
     color(r, g, b);
 
     flashFrames = (flashFrames + 1) % flashDuration;
@@ -294,7 +292,7 @@ export function paint({
   let songProgress = (melodyBeatsPlayed - 1) * beatUnit;
 
   // Draw song progress, offset by 1 to match the play progress.
-  if (noteIndex > 0 && songFinished === false) {
+  if (noteIndex >= 0 && songFinished === false) {
     // Light indicator.
 
     if (indicatorBlink < indicatorBlinkRate / 2) {
@@ -328,6 +326,7 @@ export function beat({
 
   // A. Introductory Countdown
   // TODO: I can use a negative noteIndex for this... and ditch countDown.
+
   if (noteIndex < 0) {
     square({
       tone: 10,
@@ -358,6 +357,11 @@ export function beat({
     const play = plays[playIndex];
     playingLetter = letter;
 
+    // If we are looping, then reset melodyBeatsPlayed.
+    if (noteIndex === 0 && playIndex === 0) {
+      melodyBeatsPlayed = 0;
+    }
+
     // Within the current play.
     if (playIndex < plays.length) {
       if (playDurationProgress === 0) {
@@ -382,15 +386,12 @@ export function beat({
         // Trigger a screen flash.
         flashColor = blocks[letter].texture.pixels.slice(0, 2);
 
-        // Scale block up by units of 0.5 if it is repeating.
-        // TODO: Replace scale with color fill.
+        // Fill block up with colored lines if it is repeating.
         if (plays.length > 1) {
           blocks[letter].texture = buffer(32, 32, (w, h) => {
             const dark = blocksColors[letter].map((n) => lerp(0, n, 0.5));
             color(...dark);
-
             clear();
-
             color(...blocksColors[letter]);
             const height = Math.floor(
               lerp(0, 32, (playIndex + 1) / plays.length)
@@ -469,22 +470,23 @@ export function beat({
     });
   }
 
+  if (noteIndex === notes.length && loopSong) {
+    noteIndex = 0;
+
+    each(blocks, (b) => (b.alpha = 1));
+
+    arrowTrack = new Track(
+      arrow.position[0],
+      noteX[notes[0].letter],
+      (x) => (arrow.position[0] = x)
+    );
+
+    return;
+  }
+
   // D: Ending
   if (noteIndex === notes.length) {
-    // If all notes have been played then repeat the melody or stop.
-
-    /*
-    if (loopSong) {
-      // cam.z = 8;
-      noteIndex = countDownLength;
-      melodyBeatsPlayed = 0;
-    } else {
-      // TODO: Trigger an ending sequence.
-    }
-    */
-
     noteIndex += 1;
-
     return;
   }
 
@@ -500,13 +502,8 @@ export function beat({
     });
     each(blocks, (b) => (b.alpha = 0));
     noteIndex += 1;
-  }
 
-  if (noteIndex === notes.length + 2 && loopSong) {
-    noteIndex = -countDownLength;
-    cam.z = camZ;
-    melodyBeatsPlayed = 0;
-    arrow.position[0] = noteX[notes[0].letter];
+    return;
   }
 }
 
