@@ -31,9 +31,9 @@ const blocksColors = {
   A: [255, 0, 0],
   B: [255, 127, 0],
   C: [255, 255, 0],
-  D: [0, 255, 0],
+  D: [0, 200, 0],
   E: [0, 0, 255],
-  F: [255, 0, 255],
+  F: [155, 0, 255],
   G: [255, 0, 127],
 };
 
@@ -110,7 +110,8 @@ export function boot({
   BPM = params.get("bpm") || BPM;
 
   // Change from default melody
-  melody = params.get("melody").replace(/\s/g, "") || melody;
+  melody = params.get("melody") || melody;
+  melody = melody.replace(/\s/g, "");
   notes = parseMelody(melody);
   melodyBeatsTotal = melody.length;
 
