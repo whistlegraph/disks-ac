@@ -1,3 +1,8 @@
+// Current TODO
+// TODO: Make the progress bar monochromatic.
+// TODO: Remove arrow tween in favor of a blink.
+
+// Future TODO
 // TODO: Add space for breaks.
 // TODO: Make number of notes, colors, and tones programmable.
 // TODO: Add more sounds.
@@ -153,11 +158,11 @@ export function boot({
     TRIANGLE,
     {
       texture: buffer(32, 32, () => {
-        color(127, 127, 127);
+        color(255, 255, 255);
         clear();
       }),
     },
-    [noteX[notes[0].letter], 3, 4],
+    [noteX[notes[0].letter], 4, 4],
     [0, 0, 180],
     [0.75, 0.75, 1]
   );
@@ -190,6 +195,7 @@ export function sim({
 export function paint({
   color,
   clear,
+  buffer,
   screen: { width, height },
   num: { lerp },
   help: { each },
@@ -222,96 +228,133 @@ export function paint({
   // 2. Blocks & Arrow
   each(blocks, (block) => block.graph(cam)); // Paint every block.
 
-  if (noteIndex >= 0 && songFinished === false) arrow.graph(cam); // Paint arrow.
+  // TODO: Fix this for looping.
+  if (noteIndex === 0) {
+    const filteredProgress = Math.min(1, instrumentProgress * 1.0);
+
+    if (filteredProgress) {
+      const originalArrowY = 4;
+      const newArrowY = lerp(originalArrowY, 2.25, filteredProgress);
+      arrow.position[1] = newArrowY;
+    } else {
+      arrow.position[1] = 2.25;
+    }
+
+    arrow.graph(cam); // Paint arrow.
+  }
+
+  if (noteIndex > 0 && songFinished === false) {
+    const filteredProgress = Math.min(1, instrumentProgress * 1.0);
+
+    if (playDurationProgress === 0 && noteIndex < notes.length) {
+      arrow.texture = buffer(32, 32, (w, h) => {
+        const light = [255, 255, 255].map((n) => lerp(0, n, filteredProgress));
+        color(...light);
+        clear();
+        /*
+        const height = Math.floor(lerp(0, 32, (playIndex + 1) / plays.length));
+        for (let y = 0; y < height; y += 1) {
+          line(0, y, w, y);
+        }
+         */
+      });
+
+      const originalArrowY = 4;
+      const newArrowY = lerp(originalArrowY, 2.25, filteredProgress);
+      arrow.position[1] = newArrowY;
+      arrow.graph(cam); // Paint arrow.
+    }
+  }
 
   // 3. Timeline
   const playHeight = Math.max(3, height * 0.02);
   const playY = height - playHeight;
   const notesHeight = Math.max(3, height * 0.06);
   const notesY = playY - notesHeight;
-  const indicatorHeight = Math.max(1, height * 0.005);
+  const indicatorHeight = Math.max(3, height * 0.06);
 
   // Draw black line in the background.
   color(0, 0, 0);
   box(0, playY, width, playHeight);
 
-  // 4. Draw play progress.
+  // 4. Draw progress of current play.
   if (instrumentProgress >= 0 && songFinished === false) {
     const filteredProgress = Math.min(1, instrumentProgress * 1.0);
     const boxWidth = filteredProgress * width;
 
     // Draw progress line.
-    //color(...blocksColors[playingLetter]);
-    color(127, 127, 127);
+    color(127, 127, 127); // color(...blocksColors[playingLetter]);
     box(0, playY, boxWidth, playHeight);
   }
 
   // Draw a line with every color of every block.
   const beatUnit = width / melodyBeatsTotal;
-  let startX = 0;
 
-  notes.forEach((note, index) => {
-    const plays = note.plays;
+  // let startX = 0;
 
-    let playCount = 1;
+  // notes.forEach((note, index) => {
+  //   const plays = note.plays;
 
-    plays.forEach((play) => {
-      let currentDuration = 0;
+  // TODO: Programming proper breaks should fix this!
+  // TODO: Fix rendering bug in playback here: CC_CC___C
+  // console.log(plays.length);
 
-      while (currentDuration < play.duration) {
-        // Draw full colored blocks adjusting for each duration.
-        const shift = blocksColors[note.letter].map((n) =>
-          lerp(64, n, 1 - currentDuration / play.duration)
-        );
+  // let playCount = 1;
 
-        // color(...shift);
-        // TODO: Re-enable this once the bugs are fixed.
+  // plays.forEach((play) => {
+  // let currentDuration = 0;
 
-        if (currentDuration === 0) {
-          color(...blocksColors[note.letter]);
-        } else {
-          const breakColor = blocksColors[note.letter].map((n) =>
-            lerp(n, 96, 1.0)
-          );
-          color(...breakColor);
-        }
+  // while (currentDuration < play.duration) {
+  // Draw full colored blocks adjusting for each duration.
+  // const shift = blocksColors[note.letter].map((n) =>
+  //   lerp(64, n, 1 - currentDuration / play.duration)
+  // );
+  // color(...shift); // TODO: Re-enable this once the bugs are fixed.
 
-        //color(...blocksColors[note.letter]);
+  // if (currentDuration === 0) {
+  //   color(...blocksColors[note.letter]);
+  // } else {
+  //   const breakColor = blocksColors[note.letter].map((n) =>
+  //     lerp(n, 96, 1.0)
+  //   );
+  //   color(...breakColor);
+  // }
 
-        box(startX + beatUnit * currentDuration, notesY, beatUnit, notesHeight);
+  // color(255, 255, 255);
+  // box(startX + beatUnit * currentDuration, notesY, beatUnit, notesHeight);
+  // currentDuration += 1;
+  // }
 
-        currentDuration += 1;
-      }
+  // const w = beatUnit * play.duration;
 
-      const w = beatUnit * play.duration;
+  // Draw darker boxes.
+  // if (plays.length > 1 && play.duration === 1) {
+  //   const dark = blocksColors[note.letter].map((n) => lerp(0, n, 0.5));
+  //   color(...dark);
+  //   const playProgress = playCount / plays.length;
+  //   box(startX, notesY, w, (1 - playProgress) * notesHeight);
+  // }
 
-      // Draw darker boxes.
-      if (plays.length > 1 && play.duration === 1) {
-        const dark = blocksColors[note.letter].map((n) => lerp(0, n, 0.5));
-        color(...dark);
-        const playProgress = playCount / plays.length;
-        box(startX, notesY, w, (1 - playProgress) * notesHeight);
-      }
+  // playCount += 1;
 
-      playCount += 1;
-
-      startX += w;
-    });
-  });
+  // startX += w;
+  // });
+  // });
 
   let songProgress = (melodyBeatsPlayed - 1) * beatUnit;
 
   // Draw song progress, offset by 1 to match the play progress.
-  if (noteIndex >= 0 && songFinished === false) {
+  if (noteIndex >= 0 && songFinished === false && melodyBeatsPlayed > 0) {
     // Light indicator.
-    if (indicatorBlink < indicatorBlinkRate / 2) {
-      color(0, 0, 0);
-    } else {
-      color(255, 255, 255);
-    }
+    // if (indicatorBlink < indicatorBlinkRate / 2) {
+    color(96, 96, 96);
+    // } else {
+    // color(255, 255, 255);
+    // }
 
-    indicatorBlink = (indicatorBlink + 1) % indicatorBlinkRate;
-    box(songProgress, notesY, beatUnit - 1, Math.ceil(indicatorHeight));
+    // indicatorBlink = (indicatorBlink + 1) % indicatorBlinkRate;
+    // box(songProgress, notesY, beatUnit - 1, Math.ceil(indicatorHeight));
+    box(0, notesY, songProgress + beatUnit, Math.round(indicatorHeight));
 
     // Dark covering box.
     // color(32, 32, 32);
@@ -373,9 +416,10 @@ export function beat({
 
     // Within the current play.
     if (playIndex < plays.length) {
-      if (playDurationProgress === 0) {
-        // Play a note.
+      //if (playDurationProgress === 0) {
+      // Play a note.
 
+      if (playDurationProgress === 0) {
         instrument = square({
           tone: scale[letter],
           beats: 1, //play.duration,
@@ -384,71 +428,85 @@ export function beat({
           volume: 1,
           pan: 0,
         });
+      } else {
+        instrument = square({
+          tone: scale[letter],
+          beats: 1, //play.duration,
+          attack: 0.01,
+          decay: 0.9,
+          volume: 0,
+          pan: 0,
+        });
+      }
 
-        // console.log("Playing:", letter, "Duration:", plays[playIndex]);
+      // console.log("Playing:", letter, "Duration:", plays[playIndex]);
 
-        // Reset all blocks.
-        every(blocksY, 0);
+      // Reset all blocks.
+      every(blocksY, 0);
 
-        // Jump the playing block.
+      // Jump the playing block.
+
+      if (playDurationProgress === 0) {
         blocksY[letter] = 1;
         needsFlash = true;
+      }
 
-        // Trigger a screen flash.
-        flashColor = blocks[letter].texture.pixels.slice(0, 2);
+      // Trigger a screen flash.
+      flashColor = blocks[letter].texture.pixels.slice(0, 2);
 
-        // Fill block up with colored lines if it is repeating.
-        if (plays.length > 1) {
-          blocks[letter].texture = buffer(32, 32, (w, h) => {
-            const dark = blocksColors[letter].map((n) => lerp(0, n, 0.5));
-            color(...dark);
-            clear();
-            color(...blocksColors[letter]);
-            const height = Math.floor(
-              lerp(0, 32, (playIndex + 1) / plays.length)
-            );
+      // Fill block up with colored lines if it is repeating.
+      if (plays.length > 1) {
+        blocks[letter].texture = buffer(32, 32, (w, h) => {
+          const dark = blocksColors[letter].map((n) => lerp(0, n, 0.5));
+          color(...dark);
+          clear();
+          color(...blocksColors[letter]);
+          const height = Math.floor(
+            lerp(0, 32, (playIndex + 1) / plays.length)
+          );
 
-            for (let y = 0; y < height; y += 1) {
-              line(0, y, w, y);
-            }
-          });
-        }
+          for (let y = 0; y < height; y += 1) {
+            line(0, y, w, y);
+          }
+        });
+      }
 
-        const finalPlay = playIndex === plays.length - 1;
+      const finalPlay = playIndex === plays.length - 1;
 
-        if (finalPlay) {
-          // Start moving the arrow to the next note if this is the final play
-          // of a note.
-          const nextNote = notes[noteIndex + 1];
-          const nextLetter = nextNote?.letter;
-          const nextPlays = nextNote?.plays;
-          if (nextLetter) {
-            arrowTrack = new Track(
-              arrow.position[0],
-              blocks[nextLetter].position[0],
-              (x) => (arrow.position[0] = x)
-            );
+      if (finalPlay) {
+        // Start moving the arrow to the next note if this is the final play
+        // of a note.
+        const nextNote = notes[noteIndex + 1];
+        const nextLetter = nextNote?.letter;
+        const nextPlays = nextNote?.plays;
+        if (nextLetter) {
+          // TODO: Brightly color arrow.
+          arrow.position[0] = blocks[nextLetter].position[0];
 
-            // Fill block up with a darkened version of its color.
-            if (nextPlays.length > 1) {
-              blocks[nextLetter].texture = buffer(32, 32, () => {
-                const dark = blocksColors[nextLetter].map((n) =>
-                  lerp(0, n, 0.5)
-                );
-                color(...dark);
-                clear();
-              });
-            }
-          } else {
-            // Stop moving arrow if the last note in the melody.
-            arrowTrack = undefined;
+          // arrowTrack = new Track(
+          //   arrow.position[0],
+          //   blocks[nextLetter].position[0],
+          //   (x) => (arrow.position[0] = x)
+          // );
+
+          // Fill block up with a darkened version of its color.
+          if (nextPlays.length > 1) {
+            blocks[nextLetter].texture = buffer(32, 32, () => {
+              const dark = blocksColors[nextLetter].map((n) => lerp(0, n, 0.5));
+              color(...dark);
+              clear();
+            });
           }
         } else {
-          // Stop moving arrow if we are playing the same note
-          // more than once.
+          // Stop moving arrow if the last note in the melody.
           arrowTrack = undefined;
         }
+      } else {
+        // Stop moving arrow if we are playing the same note
+        // more than once.
+        arrowTrack = undefined;
       }
+      // }
 
       if (playDurationProgress < play.duration) {
         playDurationProgress += 1;
@@ -486,11 +544,14 @@ export function beat({
 
     each(blocks, (b) => (b.alpha = 1));
 
-    arrowTrack = new Track(
-      arrow.position[0],
-      noteX[notes[0].letter],
-      (x) => (arrow.position[0] = x)
-    );
+    // TODO: Brightly color arrow.
+    arrow.position[0] = noteX[notes[0].letter];
+
+    // arrowTrack = new Track(
+    //   arrow.position[0],
+    //   noteX[notes[0].letter],
+    //   (x) => (arrow.position[0] = x)
+    // );
 
     return;
   }
