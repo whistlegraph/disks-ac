@@ -12,14 +12,29 @@ export function boot({ buffer, color, clear, box, noise16, screen }) {
     // noise16();
 
     // 2. White square
-    color(255, 255, 255);
+    color(255, 200, 200);
     const centerX = w / 2;
     const centerY = h / 2;
     const boxW = 72;
     const boxH = boxW;
     const left = centerX - boxW / 2;
     const top = centerY - boxH / 2;
+    const halfW = boxW / 2;
+    const halfH = boxH / 2;
+
     box(left, top, boxW, boxH);
+
+    // Yellow on top left.
+    color(255, 127, 0);
+    box(left, top, halfW, halfH);
+
+    // Green on top right.
+    color(0, 127, 0);
+    box(left + halfW, top, halfW, halfH);
+
+    // Blue on bottom right.
+    color(0, 72, 200);
+    box(left + halfW, top + halfH, halfW, halfH);
   });
 }
 
