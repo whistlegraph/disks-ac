@@ -101,17 +101,18 @@ export function paint({
   }
 
   // 2. Selection box
-  if (
-    (state === "select" || state === "move") &&
-    selection.w > 0 &&
-    selection.h > 0
-  ) {
+  if (state === "select" || state === "move") {
     // Box
-    color(0, 255, 0);
+    // color(0, 255, 0);
     // box(dragStart.x, dragStart.y, dragW, dragH);
 
     // Border
-    color(255, 0, 0);
+    color(200, 0, 0);
+
+    if (state === "move") {
+      color(255, 0, 0);
+    }
+
     // Top
     line(
       selection.x - 1,
