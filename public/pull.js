@@ -17,7 +17,9 @@ export function boot({ buffer, color, clear, box, noise16, screen }) {
     const centerY = h / 2;
     const boxW = 72;
     const boxH = boxW;
-    box(centerX - boxW / 2, centerY - boxH / 2, boxW, boxH);
+    const left = centerX - boxW / 2;
+    const top = centerY - boxH / 2;
+    box(left, top, boxW, boxH);
   });
 }
 
