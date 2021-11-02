@@ -12,7 +12,7 @@ export function boot({ buffer, color, clear, box, noise16, screen }) {
     color(255, 255, 255);
     const centerX = w / 2;
     const centerY = h / 2;
-    const boxW = 64;
+    const boxW = 96;
     const boxH = boxW;
     box(centerX - boxW / 2, centerY - boxH / 2, boxW, boxH);
   });
@@ -64,7 +64,11 @@ export function sim({ pen, num: { boxNormal } }) {
   // End drag.
   if (dragging === true && pen.down === false && pen.changed) {
     if (state === "select") {
-      state = "move";
+      if (selection.w > 0 && selection.h > 0) {
+        state = "move";
+      } else {
+        state = "rest";
+      }
     } else if (state === "move") {
       state = "rest";
     }
