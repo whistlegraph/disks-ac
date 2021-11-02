@@ -1,3 +1,6 @@
+// TODO: Decrease the resolution on iOS devices?
+// TODO: Prevent multiple touch from registering.
+
 let surfaceBuffer;
 
 // 🥾 Boot
@@ -12,7 +15,7 @@ export function boot({ buffer, color, clear, box, noise16, screen }) {
     color(255, 255, 255);
     const centerX = w / 2;
     const centerY = h / 2;
-    const boxW = 96;
+    const boxW = 72;
     const boxH = boxW;
     box(centerX - boxW / 2, centerY - boxH / 2, boxW, boxH);
   });
@@ -57,8 +60,6 @@ export function sim({ pen, num: { boxNormal } }) {
       selection.x += dragDelta.x;
       selection.y += dragDelta.y;
     }
-
-    console.log("Dragging:", dragAmount, state);
   }
 
   // End drag.

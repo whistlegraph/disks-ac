@@ -268,9 +268,9 @@ export function paint({
 
   // 3. Timeline
   const playHeight = Math.max(3, height * 0.02);
-  const playY = height - playHeight;
+  const playY = Math.floor(height - playHeight);
   const notesHeight = Math.max(3, height * 0.06);
-  const notesY = playY - notesHeight;
+  const notesY = Math.floor(playY - notesHeight);
   const indicatorHeight = Math.max(3, height * 0.06);
 
   // Draw black line in the background.
@@ -354,7 +354,7 @@ export function paint({
 
     // indicatorBlink = (indicatorBlink + 1) % indicatorBlinkRate;
     // box(songProgress, notesY, beatUnit - 1, Math.ceil(indicatorHeight));
-    box(0, notesY, songProgress + beatUnit, Math.round(indicatorHeight));
+    box(0, notesY, songProgress + beatUnit, Math.floor(indicatorHeight));
 
     // Dark covering box.
     // color(32, 32, 32);
