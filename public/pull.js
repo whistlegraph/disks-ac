@@ -11,7 +11,7 @@ export function boot({ buffer, color, clear, box, noise16, screen }) {
     clear();
     // noise16();
 
-    // 2. White square
+    // 2. Colored squares
     color(255, 200, 200);
     const centerX = w / 2;
     const centerY = h / 2;
@@ -24,15 +24,12 @@ export function boot({ buffer, color, clear, box, noise16, screen }) {
 
     box(left, top, boxW, boxH);
 
-    // Yellow on top left.
     color(255, 127, 0);
     box(left, top, halfW, halfH);
 
-    // Green on top right.
     color(0, 127, 0);
     box(left + halfW, top, halfW, halfH);
 
-    // Blue on bottom right.
     color(0, 72, 200);
     box(left + halfW, top + halfH, halfW, halfH);
   });
