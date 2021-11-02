@@ -1,19 +1,24 @@
-// 💗 Beat
-export function beat($api) {
-  // TODO: Play a sound here!
+// 🥾 Boot
+export function boot($api) {
+  // TODO: Runs only once!
 }
 
-// 🧮 Update
-export function update($api) {
-  // TODO: Move a  ball here!
+// 🧮 Simulate
+export function sim($api) {
+  // TODO: Move a ball here!
 }
 
-// 🎨 Render
-export function render($api) {
+// 🎨 Paint
+export function paint($api) {
   const { color, clear, num } = $api;
 
   color(num.randInt(255), num.randInt(255), num.randInt(255));
   clear();
+}
+
+// 💗 Beat
+export function beat($api) {
+  // TODO: Play a sound here!
 }
 
 // 📚 Library
