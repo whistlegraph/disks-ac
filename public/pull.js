@@ -4,7 +4,8 @@ let surfaceBuffer;
 
 // 🥾 Boot
 export function boot({ buffer, color, clear, box, noise16, frame, screen }) {
-  frame(32, 32); // TODO: This does not work for non-square resolutions.
+  frame(32, 33);
+  // TODO: Encode turns on the bottom.
 
   surfaceBuffer = buffer(screen.width, screen.height, (w, h) => {
     // 1. Background
@@ -80,7 +81,7 @@ export function sim({ pen, num: { boxNormal } }) {
 
   // End drag.
   if (dragging === true && pen.down === false && pen.changed) {
-    if (state === "select") {
+    if (state === "select" && selection) {
       if (selection.w > 0 && selection.h > 0) {
         state = "move";
       } else {

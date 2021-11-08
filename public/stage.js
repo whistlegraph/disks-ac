@@ -251,12 +251,10 @@ export function paint({
         const light = [255, 255, 255].map((n) => lerp(0, n, filteredProgress));
         color(...light);
         clear();
-        /*
-                                                        const height = Math.floor(lerp(0, 32, (playIndex + 1) / plays.length));
-                                                        for (let y = 0; y < height; y += 1) {
-                                                          line(0, y, w, y);
-                                                        }
-                                                         */
+        // const height = Math.floor(lerp(0, 32, (playIndex + 1) / plays.length));
+        // for (let y = 0; y < height; y += 1) {
+        //   line(0, y, w, y);
+        // }
       });
 
       const originalArrowY = 4;
