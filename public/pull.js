@@ -1,37 +1,38 @@
 // TODO: Decrease the resolution on iOS devices?
-// TODO: Prevent multiple touch from registering.
 
 let surfaceBuffer;
 
 // 🥾 Boot
-export function boot({ buffer, color, clear, box, noise16, screen }) {
+export function boot({ buffer, color, clear, box, noise16, frame, screen }) {
+  frame(32, 32); // TODO: This does not work for non-square resolutions.
+
   surfaceBuffer = buffer(screen.width, screen.height, (w, h) => {
     // 1. Background
-    color(0, 0, 0);
+    color(32, 64, 32);
     clear();
     // noise16();
 
     // 2. Colored squares
-    color(255, 200, 200);
     const centerX = w / 2;
     const centerY = h / 2;
-    const boxW = 72;
+    const boxW = w / 2;
     const boxH = boxW;
     const left = centerX - boxW / 2;
     const top = centerY - boxH / 2;
     const halfW = boxW / 2;
     const halfH = boxH / 2;
 
-    box(left, top, boxW, boxH);
-
     color(255, 127, 0);
-    box(left, top, halfW, halfH);
+    box(left, top, halfW, halfH); // Top Left
 
     color(0, 127, 0);
-    box(left + halfW, top, halfW, halfH);
+    box(left + halfW, top, halfW, halfH); // Top Right
+
+    color(255, 200, 200);
+    box(left, top + halfH, halfW, halfH); // Bottom Left
 
     color(0, 72, 200);
-    box(left + halfW, top + halfH, halfW, halfH);
+    box(left + halfW, top + halfH, halfW, halfH); // Bottom Right
   });
 }
 
@@ -44,6 +45,7 @@ let selection, selectionBuffer;
 // 🧮 Simulate
 export function sim({ pen, num: { boxNormal } }) {
   // Start drag.
+
   if (dragging === false && pen.down && pen.changed) {
     dragging = true;
     dragStart = { x: pen.x, y: pen.y };
@@ -98,36 +100,37 @@ export function sim({ pen, num: { boxNormal } }) {
 export function paint({
   color,
   copy,
+  paste,
   clear,
   line,
   box,
   buffer,
   screen,
   setBuffer,
+  pen,
+  paintCount,
 }) {
+  if (!pen.changed && paintCount !== 0) return false; // Render one frame, and then only on pen change.
+
   // 1. Fill screen with surfaceBuffer.
-  for (let x = 0; x < surfaceBuffer.width; x += 1) {
-    for (let y = 0; y < surfaceBuffer.height; y += 1) {
-      copy(x, y, x, y, surfaceBuffer);
-    }
-  }
+  paste(surfaceBuffer);
 
   // 2. Selection box
-  if (state === "select" || state === "move") {
+  if (selection && (state === "select" || (state === "move" && !dragging))) {
     // Box
     // color(0, 255, 0);
     // box(dragStart.x, dragStart.y, dragW, dragH);
 
     // Border
-    color(200, 0, 0);
+    color(255, 0, 0, 128);
 
     if (state === "move") {
-      color(255, 0, 0);
+      color(200, 0, 0, 128);
     }
 
     // Top
     line(
-      selection.x - 1,
+      selection.x,
       selection.y - 1,
       selection.x + selection.w,
       selection.y - 1
@@ -136,7 +139,7 @@ export function paint({
     line(
       selection.x,
       selection.y + selection.h,
-      selection.x + selection.w,
+      selection.x + selection.w - 1,
       selection.y + selection.h
     );
     // Left
@@ -176,35 +179,23 @@ export function paint({
   // 4. Move selection buffer.
   if (state === "move" && selectionBuffer) {
     // Fill rectangular bitmap of selection.
-    for (let x = 0; x < selectionBuffer.width; x += 1) {
-      for (let y = 0; y < selectionBuffer.height; y += 1) {
-        copy(selection.x + x, selection.y + y, x, y, selectionBuffer);
-      }
-    }
+    paste(selectionBuffer, selection.x, selection.y);
   }
 
   // 5. Paste selection buffer.
   if (state === "rest" && selectionBuffer) {
     // Switch to surfaceBuffer.
     setBuffer(surfaceBuffer);
-
+    paste(selectionBuffer, selection.x, selection.y);
     // Copy selectionBuffer to surfaceBuffer.
-    for (let x = 0; x < selectionBuffer.width; x += 1) {
-      for (let y = 0; y < selectionBuffer.height; y += 1) {
-        copy(selection.x + x, selection.y + y, x, y, selectionBuffer);
-      }
-    }
     selectionBuffer = undefined;
+    selection = undefined;
 
     // Switch back to screen buffer.
     setBuffer(screen);
 
     // Repaint screen with surfaceBuffer.
-    for (let x = 0; x < surfaceBuffer.width; x += 1) {
-      for (let y = 0; y < surfaceBuffer.height; y += 1) {
-        copy(x, y, x, y, surfaceBuffer);
-      }
-    }
+    paste(surfaceBuffer);
   }
 }
 

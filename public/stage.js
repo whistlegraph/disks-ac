@@ -252,11 +252,11 @@ export function paint({
         color(...light);
         clear();
         /*
-        const height = Math.floor(lerp(0, 32, (playIndex + 1) / plays.length));
-        for (let y = 0; y < height; y += 1) {
-          line(0, y, w, y);
-        }
-         */
+                                                        const height = Math.floor(lerp(0, 32, (playIndex + 1) / plays.length));
+                                                        for (let y = 0; y < height; y += 1) {
+                                                          line(0, y, w, y);
+                                                        }
+                                                         */
       });
 
       const originalArrowY = 4;
@@ -268,9 +268,9 @@ export function paint({
 
   // 3. Timeline
   const playHeight = Math.max(3, height * 0.02);
-  const playY = Math.floor(height - playHeight);
+  const playY = Math.ceil(height - playHeight);
   const notesHeight = Math.max(3, height * 0.06);
-  const notesY = Math.floor(playY - notesHeight);
+  const notesY = Math.ceil(playY - notesHeight);
   const indicatorHeight = Math.max(3, height * 0.06);
 
   // Draw black line in the background.

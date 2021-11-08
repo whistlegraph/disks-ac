@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/whistlegraph/disks/issues"
   },
-  "homepage": "https://github.com/whistlegraph/disks#readme"
+  "homepage": "https://github.com/whistlegraph/disks#readme",
+  "devDependencies": {
+    "http-server": "^14.0.0"
+  }
 }
