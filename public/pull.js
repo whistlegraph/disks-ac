@@ -1,4 +1,8 @@
+// TODO: Refactor current code.
+// TODO: Fix Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=1247687
 // TODO: Encode turns on the bottom.
+// TODO: Store and play back turns / run backwards and forwards through them?
+// TODO: Add modes for playback / preload.
 
 let surfaceBuffer;
 let turnBuffer;
@@ -31,7 +35,6 @@ export function boot({
     // 1. Background
     color(40, 40, 40);
     clear();
-    // noise16();
 
     // 2. Colored squares
     const centerX = Math.ceil(w / 2);
@@ -40,12 +43,6 @@ export function boot({
     const boxH = boxW;
     const left = centerX - boxW / 2;
     const top = centerY - boxH / 2;
-    const halfW = boxW / 2;
-    const halfH = boxH / 2;
-    const qW = halfW / 2;
-    const qH = halfH / 2;
-    const eW = qW / 2;
-    const eH = qH / 2;
 
     color(190, 190, 190);
     box(left, top, boxW, boxH);
@@ -130,6 +127,8 @@ export function sim({
   if (dragging === true && pen.down === false && pen.changed) {
     if (state === "select" && selection) {
       if (selection.w > 0 && selection.h > 0) {
+        // TODO: Make selection box.
+
         state = "move";
       } else {
         state = "rest";
@@ -155,7 +154,6 @@ export function sim({
           // And we have enough pixels.
           if (turns.length < turnBuffer.width / 2) {
             turns.push(turn); // x, y, w, h, endx, endy
-            console.log("Turn:", turn, "Turns:", turns);
           } else {
             console.log("Turn buffer is full!");
           }
@@ -187,66 +185,32 @@ export function paint({
   pen,
   paintCount,
 }) {
-  // Render one frame, and then only on pen change or if we are dragging a box.
-  if (!pen.changed && paintCount !== 0 && state !== "move" && dragging)
+  // 1. Caching
+  // Always render the first frame, and then only on pen change,
+  // or if actively dragging a selection.
+  const boxIsBlinking = state === "move" && dragging;
+  if (paintCount !== 0 && pen.changed === false && boxIsBlinking === false) {
     return false;
+  }
 
-  // 0. Clear backdrop.
-  color(255, 0, 0);
-  clear();
-
-  // 1. Fill screen with surfaceBuffer.
+  // 2. Background (surfaceBuffer)
   paste(surfaceBuffer);
 
   // 2. Selection box
   if (selection && (state === "select" || state === "move")) {
-    // Box
-    // color(0, 255, 0);
-    // box(selection.x, selection.y, selection.w, selection.h);
-
-    // Border
-    color(255, 0, 0, 128);
-
-    if (state === "move") {
-      color(200, 0, 0, 128);
-    }
+    if (state === "select") color(255, 0, 0, 128);
+    else if (state === "move") color(200, 0, 0, 128);
 
     if (state === "move" && dragging) {
       if (paintCount % 60 === 0) boxBlink = !boxBlink;
       color(200, 0, 0, boxBlink ? 64 : 0);
     }
 
-    // Top
-    line(
-      selection.x,
-      selection.y - 1,
-      selection.x + selection.w,
-      selection.y - 1
-    );
-    // Bottom
-    line(
-      selection.x,
-      selection.y + selection.h,
-      selection.x + selection.w - 1,
-      selection.y + selection.h
-    );
-    // Left
-    line(
-      selection.x - 1,
-      selection.y - 1,
-      selection.x - 1,
-      selection.y + selection.h
-    );
-    // Right
-    line(
-      selection.x + selection.w,
-      selection.y,
-      selection.x + selection.w,
-      selection.y + selection.h
-    );
+    box(selection.x, selection.y, selection.w, selection.h, "outline");
   }
 
   // 3. Create selection buffer if needed.
+  // TODO: This should move to another function or be created in sim.
   if (
     state === "move" &&
     !selectionBuffer &&
@@ -261,7 +225,7 @@ export function paint({
         }
       }
     });
-    // console.log("Captured selection:", selectionBuffer);
+    console.log("Captured selection:", selectionBuffer);
   }
 
   // 4. Move selection buffer.
@@ -287,7 +251,6 @@ export function paint({
   }
 
   // 6. Draw every turn, and plot the last if needed.
-
   if (plottedTurns < turns.length) {
     setBuffer(turnBuffer);
     const turnToPlot = turns[plottedTurns];
