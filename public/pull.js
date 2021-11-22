@@ -13,7 +13,6 @@ let sketch;
 
 // Dragging & making a selection.
 // TODO: This should be baked into Pen.
-let dragging = false;
 let selection, selectionBuffer;
 
 // This should be a simple switchbox that can reset?
@@ -54,37 +53,39 @@ export function boot({ resize, pixels, screen, wipe, ink }) {
 }
 
 // 🧮 Simulate
+// User flow moves between states: rest ~> selecting ~> selected ~> placing
+//                                 1       2            3           4
+// TODO: Start with states here as the highest condition?
 export function sim({ screen, pen, geo, cursor }) {
   // Start drag.
-  if (pen.is("down")) {
-    if (state === "rest") state = "select";
-    dragging = true;
+  if (pen.did("touch")) {
+    if (state === "rest") {
+      state = "selecting";
+      cursor("none");
+      select(geo, { x: pen.x, y: pen.y, w: 1, h: 1 }, sketch);
+    }
+    if (state === "selected") state = "placing";
   }
 
   // Continue drag.
-  if (pen.is("drawing")) {
-    if (state === "select") {
-      selection = new geo.Box(
-        pen.dragStartPos.x,
-        pen.dragStartPos.y,
-        pen.dragAmount.x,
-        pen.dragAmount.y
-      ).fromTopLeft.croppedTo(0, 0, sketch.width, sketch.height);
-
-      const s = selection;
-      turn = [s.x, s.y, s.w, s.h];
-
-      cursor("none");
-    } else if (state === "move") {
-      selection.x += pen.dragDelta.x;
-      selection.y += pen.dragDelta.y;
+  if (pen.did("draw")) {
+    if (state === "selecting") {
+      select(geo, pen.dragBox, sketch);
+    } else if (state === "placing") {
+      selection.move(pen.dragDelta);
       cursor("tiny");
     }
   }
 
   // End drag.
-  if (pen.is("up")) {
-    if (state === "move") {
+  if (pen.did("lift")) {
+    if (state === "selecting" && selection) {
+      state = "selected";
+      blinkCount = 0;
+      boxBlink = false;
+      boxIsBlinking = true;
+      cursor("tiny");
+    } else if (state === "placing") {
       // Get finished turn data.
       turn.push(selection.x, selection.y);
 
@@ -110,19 +111,10 @@ export function sim({ screen, pen, geo, cursor }) {
           }
         }
       }
-
       boxIsBlinking = false;
       state = "rest";
       cursor("precise");
-    } else if (state === "select" && selection) {
-      state = "move";
-      blinkCount = 0;
-      boxBlink = false;
-      boxIsBlinking = true;
-      cursor("tiny");
     }
-
-    dragging = false;
   }
 }
 
@@ -148,15 +140,15 @@ export function paint({
     return false;
   }
 
-  // 2. Background (surfaceBuffer)
+  // 2. Background
   paste(sketch);
 
   // 2. Selection box
-  if (selection && (state === "select" || state === "move")) {
-    if (state === "select") ink(255, 0, 0, 128);
-    else if (state === "move") ink(200, 0, 0, 128);
+  if (selection) {
+    if (state === "selecting") ink(255, 0, 0, 128);
+    else if (state === "selected") ink(200, 0, 0, 128);
 
-    if (state === "move" && dragging) {
+    if (state === "placing") {
       if (blinkCount % 60 === 0) {
         boxBlink = !boxBlink;
       }
@@ -170,7 +162,7 @@ export function paint({
   // 3. Create selection buffer if needed.
   // TODO: This should move to another function or be created in sim.
   if (
-    state === "move" &&
+    state === "selected" &&
     !selectionBuffer &&
     selection.w > 0 &&
     selection.h > 0
@@ -186,11 +178,8 @@ export function paint({
     console.log("Captured selection:", selectionBuffer);
   }
 
-  // 4. Move selection buffer.
-  if (state === "move" && selectionBuffer) {
-    // Fill rectangular bitmap of selection.
-    paste(selectionBuffer, selection.x, selection.y);
-  }
+  // 4. Render selection buffer.
+  if (selectionBuffer) paste(selectionBuffer, selection.x, selection.y);
 
   // 5. Paste selection buffer.
   if (state === "rest" && selectionBuffer) {
@@ -237,4 +226,10 @@ export function beat($api) {
 }
 
 // 📚 Library
-// ...
+
+// This runs every time a selection needs to be made or updated.
+function select(geo, { x, y, w, h }, { width, height }) {
+  selection = new geo.Box(x, y, w, h).abs.crop(0, 0, width, height);
+  const s = selection;
+  turn = [s.x, s.y, s.w, s.h];
+}
