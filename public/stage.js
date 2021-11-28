@@ -619,6 +619,7 @@ function parseMelody(notes) {
 }
 
 function wiggleBlock({ position }, choose) {
+  // TODO: Adding choose as a parameter here feels janky. 2021.11.28.01.28
   const base = position[0];
   return [
     choose([0, -0.1, 0.125, -0.125, 0.1, 0], [0, -0.1, 0.125, -0.125, 0.1, 0]),
