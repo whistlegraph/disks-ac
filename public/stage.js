@@ -1,10 +1,7 @@
-// Current TODO
-// TODO: Remove arrow tween in favor of a blink.
+// Stage, 2021
 
-// Future TODO
-// TODO: Add space for breaks.
-// TODO: Make number of notes, colors, and tones programmable.
-// TODO: Add more sounds.
+// TODO
+// * See: https://www.notion.so/whistlegraph/9abf76a4437a46199087176bd06657ea?v=98b5d3a8965e47d9a4c177dd5147960d
 
 // Graphics
 const blocks = {};
@@ -12,7 +9,7 @@ let cam, arrow;
 
 const camZ = 10;
 
-const noteX = {
+const blocksX = {
   A: -6,
   B: -4,
   C: -2,
@@ -37,13 +34,15 @@ const blocksColors = {
   B: [255, 127, 0],
   C: [255, 255, 0],
   D: [0, 200, 0],
-  E: [0, 0, 255],
+  E: [0, 150, 255],
   F: [155, 0, 255],
   G: [255, 0, 127],
 };
 
 let arrowTrack;
 let arrowSpin = 0;
+
+let wiggle;
 
 let needsFlash = false;
 let flashColor;
@@ -59,8 +58,6 @@ let indicatorBlinkRate = 16;
 let BPM = 80;
 
 let loopSong = false;
-
-let countDownLength = 4;
 
 let melody = `
 GECFDBECAB_C
@@ -91,10 +88,14 @@ let notes;
 let melodyBeatsTotal;
 let melodyBeatsPlayed = 0;
 
-let noteIndex = -countDownLength;
+let countIn = 4;
+let noteI = -countIn;
 let instrument;
 let instrumentProgress;
 let playingLetter;
+
+// General
+const { abs } = Math;
 
 export function boot({
   query,
@@ -139,12 +140,8 @@ export function boot({
   for (const l of "ABCDEFG") // Add each colored block.
     blocks[l] = new Form(
       SQUARE,
-      {
-        texture: pixels(32, 32, () => {
-          wipe(...blocksColors[l]);
-        }),
-      },
-      [noteX[l], 0, 4]
+      { texture: pixels(32, 32, () => wipe(...blocksColors[l])) },
+      [blocksX[l], 0, 4]
     );
 
   each(blocks, (b) => (b.alpha = 0.25));
@@ -152,24 +149,36 @@ export function boot({
   // Add indicator arrow.
   arrow = new Form(
     TRIANGLE,
-    {
-      texture: pixels(32, 32, () => {
-        wipe(255, 255, 255);
-      }),
-    },
-    [noteX[notes[0].letter], 4, 4],
+    { texture: pixels(32, 32, () => wipe(32)) },
+    [blocksX[notes[0].letter], 4, 4],
     [0, 0, 180],
-    [0.75, 0.75, 1]
+    [0.7, 0.7, 1]
   );
 }
 
-export function sim({ num: { lerp }, sound: { time }, help: { each } }) {
+let wiggleStartTime;
+
+export function sim({
+  num: { lerp },
+  sound: { time, bpm, bp },
+  help: { each },
+}) {
   //arrowSpin += 3;
   //arrow.rotation[1] = arrowSpin;
 
-  if (!instrument) return; // Make sure our main instrument is playing.
+  // console.log(bp);
 
-  const p = instrument.progress(time); // Progress of current note.
+  // Make sure our main instrument is playing and if it's not then return after
+  // checking for the introductory wiggle.
+  if (!instrument) {
+    // TODO: Pre-calc. beatProgress so that it is always available in the API. 2021.11.28.00.02
+    const bpmInSec = 60 / bpm;
+    const beatProgress = (time - wiggleStartTime) / bpmInSec;
+    if (beatProgress >= 0.5) wiggle?.step((beatProgress - 0.5) / 0.5);
+    return;
+  }
+
+  const p = Math.min(1, instrument.progress(time)); // Progress of current note.
   instrumentProgress = p;
 
   // Animate all blocks back to resting position based on p.
@@ -179,6 +188,11 @@ export function sim({ num: { lerp }, sound: { time }, help: { each } }) {
 
   // Animate arrow to next position, if one exists.
   arrowTrack?.step(p * 3);
+
+  // Animate any block wiggles, if they exist.
+  if (playDurationProgress === 0) {
+    if (p >= 0.5) wiggle?.step((p - 0.5) / 0.5);
+  }
 }
 
 export function paint({
@@ -195,9 +209,9 @@ export function paint({
 
   // 1. Background
   if (needsFlash) {
-    const r = lerp(flashColor[0], 72, 0.85);
-    const g = lerp(flashColor[1], 72, 0.85);
-    const b = lerp(flashColor[2], 72, 0.85);
+    const r = lerp(flashColor[0], 32, 0.95);
+    const g = lerp(flashColor[1], 32, 0.95);
+    const b = lerp(flashColor[2], 32, 0.95);
     ink(r, g, b);
 
     flashFrames = (flashFrames + 1) % flashDuration;
@@ -205,10 +219,10 @@ export function paint({
       needsFlash = false;
     }
   } else {
-    if (songFinished && noteIndex > notes.length) {
-      ink(32, 32, 32); // Dark backdrop once the song ends.
+    if (songFinished && noteI > notes.length) {
+      ink(32); // Dark backdrop once the song ends.
     } else {
-      ink(64, 64, 64); // Grey backdrop as usual.
+      ink(48); // Grey backdrop as usual.
     }
   }
   wipe();
@@ -217,12 +231,10 @@ export function paint({
   each(blocks, (block) => block.graph(cam)); // Paint every block.
 
   // TODO: Fix this for looping.
-  if (noteIndex === 0) {
-    const filteredProgress = Math.min(1, instrumentProgress * 1.0);
-
-    if (filteredProgress) {
+  if (noteI < 0 && noteI > -countIn) {
+    if (instrumentProgress) {
       const originalArrowY = 4;
-      arrow.position[1] = lerp(originalArrowY, 2.25, filteredProgress);
+      arrow.position[1] = lerp(originalArrowY, 2.25, instrumentProgress);
     } else {
       arrow.position[1] = 2.25;
     }
@@ -230,12 +242,12 @@ export function paint({
     arrow.graph(cam); // Paint arrow.
   }
 
-  if (noteIndex > 0 && songFinished === false) {
-    const filteredProgress = Math.min(1, instrumentProgress * 1.0);
-
-    if (playDurationProgress === 0 && noteIndex < notes.length) {
+  if (noteI > 0 && songFinished === false) {
+    if (playDurationProgress === 0 && noteI < notes.length) {
       arrow.texture = pixels(32, 32, (w, h) => {
-        const light = [255, 255, 255].map((n) => lerp(0, n, filteredProgress));
+        const light = [255, 255, 255].map((n) =>
+          lerp(0, n, instrumentProgress)
+        );
         wipe(...light);
         // const height = Math.floor(lerp(0, 32, (playIndex + 1) / plays.length));
         // for (let y = 0; y < height; y += 1) {
@@ -244,18 +256,18 @@ export function paint({
       });
 
       const originalArrowY = 4;
-      const newArrowY = lerp(originalArrowY, 2.25, filteredProgress);
+      const newArrowY = lerp(originalArrowY, 2.25, instrumentProgress);
       arrow.position[1] = newArrowY;
-      arrow.graph(cam); // Paint arrow.
+      // arrow.graph(cam); // Paint arrow.
     }
   }
 
   // 3. Timeline
   const playHeight = Math.max(3, height * 0.02);
   const playY = Math.ceil(height - playHeight);
-  const notesHeight = Math.max(3, height * 0.06);
+  const notesHeight = Math.max(3, height * 0.02);
   const notesY = Math.ceil(playY - notesHeight);
-  const indicatorHeight = Math.max(3, height * 0.06);
+  const indicatorHeight = Math.max(3, height * 0.02);
 
   // Draw black line in the background.
   ink(0).box(0, playY, width, playHeight);
@@ -327,7 +339,7 @@ export function paint({
   let songProgress = (melodyBeatsPlayed - 1) * beatUnit;
 
   // Draw song progress, offset by 1 to match the play progress.
-  if (noteIndex >= 0 && songFinished === false && melodyBeatsPlayed > 0) {
+  if (noteI >= 0 && songFinished === false && melodyBeatsPlayed > 0) {
     // Light indicator.
     // if (indicatorBlink < indicatorBlinkRate / 2) {
     ink(96, 96, 96);
@@ -352,49 +364,52 @@ let playDurationProgress = 0;
 
 // 2. Music
 export function beat({
-  help: { every, each },
-  sound: { bpm, square },
-  num: { lerp },
+  help: { every, each, choose, repeat },
+  sound: { bpm, time, square },
+  num: { lerp, Track },
   graph: { pixels, ink, wipe, line },
 }) {
   bpm(BPM);
 
   // A. Introductory Countdown
-  // TODO: I can use a negative noteIndex for this... and ditch countDown.
-
-  if (noteIndex < 0) {
+  if (noteI < 0) {
     square({
-      tone: 50 - Math.abs(noteIndex * 10),
+      tone: 50 - abs(noteI * 10),
       beats: 0.05,
       attack: 0.1,
       decay: 0.1,
       volume: 0.7,
       pan: 0,
     });
+
     cam.forward(2);
+    noteI += 1;
 
-    noteIndex += 1;
+    each(blocks, (b) => {
+      b.alpha = lerp(0.25, 1, 1 - abs(noteI) / countIn);
+      const scale = lerp(1, 0.85, 1 - abs(noteI) / countIn);
+      b.scale[0] = b.scale[1] = scale;
+    });
 
-    // Lerp alpha for every block.
-    each(
-      blocks,
-      (b) =>
-        (b.alpha = lerp(0.25, 1, 1 - Math.abs(noteIndex) / countDownLength))
-    );
+    // Wiggle the first block.
+    if (noteI === 0) {
+      wiggle = new Track(...wiggleBlock(blocks[notes[noteI].letter], choose));
+      wiggleStartTime = time;
+    }
 
     return;
   }
 
   // B. Melody
-  if (noteIndex < notes.length) {
+  if (noteI < notes.length) {
     // Within the current note.
-    const letter = notes[noteIndex].letter;
-    const plays = notes[noteIndex].plays;
+    const letter = notes[noteI].letter;
+    const plays = notes[noteI].plays;
     const play = plays[playIndex];
     playingLetter = letter;
 
     // If we are looping, then reset melodyBeatsPlayed.
-    if (noteIndex === 0 && playIndex === 0 && playDurationProgress === 0) {
+    if (noteI === 0 && playIndex === 0 && playDurationProgress === 0) {
       melodyBeatsPlayed = 0;
     }
 
@@ -407,7 +422,7 @@ export function beat({
         instrument = square({
           tone: scale[letter],
           beats: 1, //play.duration,
-          attack: 0.01,
+          attack: 0.1,
           decay: 0.9,
           volume: 1,
           pan: 0,
@@ -416,7 +431,7 @@ export function beat({
         instrument = square({
           tone: scale[letter],
           beats: 1, //play.duration,
-          attack: 0.01,
+          attack: 0.1,
           decay: 0.9,
           volume: 0,
           pan: 0,
@@ -454,16 +469,20 @@ export function beat({
       if (finalPlay) {
         // Start moving the arrow to the next note if this is the final play
         // of a note.
-        const nextNote = notes[noteIndex + 1];
+        const nextNote = notes[noteI + 1];
         const nextLetter = nextNote?.letter;
         const nextPlays = nextNote?.plays;
         if (nextLetter) {
           // TODO: Brightly color arrow.
           arrow.position[0] = blocks[nextLetter].position[0];
 
+          // blocks[nextLetter].position[0] += Math.random(0.5);
+
+          // repeat(8, (n) => wiggleValues.push());
+          wiggle = new Track(...wiggleBlock(blocks[nextLetter], choose));
+
           // arrowTrack = new Track(
-          //   arrow.position[0],
-          //   blocks[nextLetter].position[0],
+          //   { from: arrow.position[0], to: blocks[nextLetter].position[0] },
           //   (x) => (arrow.position[0] = x)
           // );
 
@@ -477,6 +496,7 @@ export function beat({
         } else {
           // Stop moving arrow if the last note in the melody.
           arrowTrack = undefined;
+          wiggle = undefined;
         }
       } else {
         // Stop moving arrow if we are playing the same note
@@ -498,14 +518,14 @@ export function beat({
     // Advance to the next note.
     if (playIndex === plays.length) {
       playIndex = 0;
-      noteIndex += 1;
+      noteI += 1;
     }
 
     melodyBeatsPlayed += 1;
   }
 
   // C: Metronome clicks up till the end of the last note.
-  if (noteIndex < notes.length + 1) {
+  if (noteI < notes.length + 1) {
     square({
       tone: 10,
       beats: 0.05,
@@ -516,13 +536,13 @@ export function beat({
     });
   }
 
-  if (noteIndex === notes.length && loopSong) {
-    noteIndex = 0;
+  if (noteI === notes.length && loopSong) {
+    noteI = 0;
 
     each(blocks, (b) => (b.alpha = 1));
 
     // TODO: Brightly color arrow.
-    arrow.position[0] = noteX[notes[0].letter];
+    arrow.position[0] = blocksX[notes[0].letter];
 
     // arrowTrack = new Track(
     //   arrow.position[0],
@@ -534,13 +554,13 @@ export function beat({
   }
 
   // D: Ending
-  if (noteIndex === notes.length) {
-    noteIndex += 1;
+  if (noteI === notes.length) {
+    noteI += 1;
     return;
   }
 
   // E: Final Sound
-  if (noteIndex === notes.length + 1) {
+  if (noteI === notes.length + 1) {
     square({
       tone: 25,
       beats: 0.2,
@@ -550,13 +570,13 @@ export function beat({
       pan: 0,
     });
     each(blocks, (b) => (b.alpha = 0));
-    noteIndex += 1;
+    noteI += 1;
     melodyBeatsPlayed += 1;
-    return;
   }
 }
 
 // ⚙️ Utilities
+
 // Parses and builds an array of character sequences with underscores
 // marking duration. Leading underscores are ignored!
 function parseMelody(notes) {
@@ -596,4 +616,12 @@ function parseMelody(notes) {
   parsedSequence.push({ letter: lastLetter, plays });
 
   return parsedSequence;
+}
+
+function wiggleBlock({ position }, choose) {
+  const base = position[0];
+  return [
+    choose([0, -0.1, 0.125, -0.125, 0.1, 0], [0, -0.1, 0.125, -0.125, 0.1, 0]),
+    (x) => (position[0] = base + x),
+  ];
 }
