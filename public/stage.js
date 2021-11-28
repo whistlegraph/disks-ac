@@ -1,5 +1,4 @@
 // Current TODO
-// TODO: Make the progress bar monochromatic.
 // TODO: Remove arrow tween in favor of a blink.
 
 // Future TODO
@@ -101,11 +100,10 @@ export function boot({
   query,
   Camera,
   Form,
-  buffer,
+  pixels,
   SQUARE,
   TRIANGLE,
-  clear,
-  color,
+  wipe,
   screen,
   help: { each },
 }) {
@@ -142,24 +140,21 @@ export function boot({
     blocks[l] = new Form(
       SQUARE,
       {
-        texture: buffer(32, 32, () => {
-          color(...blocksColors[l]);
-          clear();
+        texture: pixels(32, 32, () => {
+          wipe(...blocksColors[l]);
         }),
       },
       [noteX[l], 0, 4]
     );
 
-  // Zero alpha for every block.
-  each(blocks, (b) => (b.alpha = 0));
+  each(blocks, (b) => (b.alpha = 0.25));
 
   // Add indicator arrow.
   arrow = new Form(
     TRIANGLE,
     {
-      texture: buffer(32, 32, () => {
-        color(255, 255, 255);
-        clear();
+      texture: pixels(32, 32, () => {
+        wipe(255, 255, 255);
       }),
     },
     [noteX[notes[0].letter], 4, 4],
@@ -168,13 +163,7 @@ export function boot({
   );
 }
 
-export function sim({
-  pen,
-  screen,
-  num: { lerp },
-  sound: { time },
-  help: { each },
-}) {
+export function sim({ num: { lerp }, sound: { time }, help: { each } }) {
   //arrowSpin += 3;
   //arrow.rotation[1] = arrowSpin;
 
@@ -193,13 +182,12 @@ export function sim({
 }
 
 export function paint({
-  color,
-  clear,
-  buffer,
+  ink,
+  wipe,
+  pixels,
   screen: { width, height },
   num: { lerp },
   help: { each },
-  line,
   box,
 }) {
   // if (freezeFrame === true) return false;
@@ -210,7 +198,7 @@ export function paint({
     const r = lerp(flashColor[0], 72, 0.85);
     const g = lerp(flashColor[1], 72, 0.85);
     const b = lerp(flashColor[2], 72, 0.85);
-    color(r, g, b);
+    ink(r, g, b);
 
     flashFrames = (flashFrames + 1) % flashDuration;
     if (flashFrames === 0) {
@@ -218,12 +206,12 @@ export function paint({
     }
   } else {
     if (songFinished && noteIndex > notes.length) {
-      color(32, 32, 32); // Dark backdrop once the song ends.
+      ink(32, 32, 32); // Dark backdrop once the song ends.
     } else {
-      color(64, 64, 64); // Grey backdrop as usual.
+      ink(64, 64, 64); // Grey backdrop as usual.
     }
   }
-  clear(); // Paint background.
+  wipe();
 
   // 2. Blocks & Arrow
   each(blocks, (block) => block.graph(cam)); // Paint every block.
@@ -234,8 +222,7 @@ export function paint({
 
     if (filteredProgress) {
       const originalArrowY = 4;
-      const newArrowY = lerp(originalArrowY, 2.25, filteredProgress);
-      arrow.position[1] = newArrowY;
+      arrow.position[1] = lerp(originalArrowY, 2.25, filteredProgress);
     } else {
       arrow.position[1] = 2.25;
     }
@@ -247,10 +234,9 @@ export function paint({
     const filteredProgress = Math.min(1, instrumentProgress * 1.0);
 
     if (playDurationProgress === 0 && noteIndex < notes.length) {
-      arrow.texture = buffer(32, 32, (w, h) => {
+      arrow.texture = pixels(32, 32, (w, h) => {
         const light = [255, 255, 255].map((n) => lerp(0, n, filteredProgress));
-        color(...light);
-        clear();
+        wipe(...light);
         // const height = Math.floor(lerp(0, 32, (playIndex + 1) / plays.length));
         // for (let y = 0; y < height; y += 1) {
         //   line(0, y, w, y);
@@ -272,8 +258,7 @@ export function paint({
   const indicatorHeight = Math.max(3, height * 0.06);
 
   // Draw black line in the background.
-  color(0, 0, 0);
-  box(0, playY, width, playHeight);
+  ink(0).box(0, playY, width, playHeight);
 
   // 4. Draw progress of current play.
   if (instrumentProgress >= 0 && songFinished === false) {
@@ -281,8 +266,8 @@ export function paint({
     const boxWidth = filteredProgress * width;
 
     // Draw progress line.
-    color(127, 127, 127); // color(...blocksColors[playingLetter]);
-    box(0, playY, boxWidth, playHeight);
+    // or, ...blocksColors[playingLetter]
+    ink(127).box(0, playY, boxWidth, playHeight);
   }
 
   // Draw a line with every color of every block.
@@ -345,7 +330,7 @@ export function paint({
   if (noteIndex >= 0 && songFinished === false && melodyBeatsPlayed > 0) {
     // Light indicator.
     // if (indicatorBlink < indicatorBlinkRate / 2) {
-    color(96, 96, 96);
+    ink(96, 96, 96);
     // } else {
     // color(255, 255, 255);
     // }
@@ -369,8 +354,8 @@ let playDurationProgress = 0;
 export function beat({
   help: { every, each },
   sound: { bpm, square },
-  num: { lerp, randIntRange, Track },
-  graph: { buffer, color, clear, line },
+  num: { lerp },
+  graph: { pixels, ink, wipe, line },
 }) {
   bpm(BPM);
 
@@ -393,7 +378,8 @@ export function beat({
     // Lerp alpha for every block.
     each(
       blocks,
-      (b) => (b.alpha = lerp(0, 1, 1 - Math.abs(noteIndex) / countDownLength))
+      (b) =>
+        (b.alpha = lerp(0.25, 1, 1 - Math.abs(noteIndex) / countDownLength))
     );
 
     return;
@@ -454,18 +440,12 @@ export function beat({
 
       // Fill block up with colored lines if it is repeating.
       if (plays.length > 1) {
-        blocks[letter].texture = buffer(32, 32, (w, h) => {
+        blocks[letter].texture = pixels(32, 32, (w) => {
           const dark = blocksColors[letter].map((n) => lerp(0, n, 0.5));
-          color(...dark);
-          clear();
-          color(...blocksColors[letter]);
-          const height = Math.floor(
-            lerp(0, 32, (playIndex + 1) / plays.length)
-          );
-
-          for (let y = 0; y < height; y += 1) {
-            line(0, y, w, y);
-          }
+          wipe(...dark);
+          ink(...blocksColors[letter]);
+          const h = Math.floor(lerp(0, 32, (playIndex + 1) / plays.length));
+          for (let y = 0; y < h; y += 1) line(0, y, w, y);
         });
       }
 
@@ -489,10 +469,9 @@ export function beat({
 
           // Fill block up with a darkened version of its color.
           if (nextPlays.length > 1) {
-            blocks[nextLetter].texture = buffer(32, 32, () => {
+            blocks[nextLetter].texture = pixels(32, 32, () => {
               const dark = blocksColors[nextLetter].map((n) => lerp(0, n, 0.5));
-              color(...dark);
-              clear();
+              wipe(...dark);
             });
           }
         } else {

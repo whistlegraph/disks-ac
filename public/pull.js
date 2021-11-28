@@ -12,7 +12,6 @@ let state = "rest";
 let sketch;
 
 // Dragging & making a selection.
-// TODO: This should be baked into Pen.
 let selection, selectionBuffer;
 
 // This should be a simple switchbox that can reset?
@@ -26,7 +25,7 @@ let history,
   turns = [],
   plottedTurns = 0;
 
-// 🥾 Boot
+// 🥾 Boot (Runs once before first paint and sim)
 export function boot({ resize, pixels, screen, wipe, ink }) {
   resize(64, 64 + 1);
 
@@ -52,73 +51,13 @@ export function boot({ resize, pixels, screen, wipe, ink }) {
   history = pixels(screen.width, 1, () => wipe(0));
 }
 
-// 🧮 Simulate
+// 🧮 Simulate (Runs once per logic frame (120fps)).
 // User flow moves between states: rest ~> selecting ~> selected ~> placing
 //                                 1       2            3           4
 // TODO: Start with states here as the highest condition?
-export function sim({ screen, pen, geo, cursor }) {
-  // Start drag.
-  if (pen.did("touch")) {
-    if (state === "rest") {
-      state = "selecting";
-      cursor("none");
-      select(geo, { x: pen.x, y: pen.y, w: 1, h: 1 }, sketch);
-    }
-    if (state === "selected") state = "placing";
-  }
+export function sim() {}
 
-  // Continue drag.
-  if (pen.did("draw")) {
-    if (state === "selecting") {
-      select(geo, pen.dragBox, sketch);
-    } else if (state === "placing") {
-      selection.move(pen.dragDelta);
-      cursor("tiny");
-    }
-  }
-
-  // End drag.
-  if (pen.did("lift")) {
-    if (state === "selecting" && selection) {
-      state = "selected";
-      blinkCount = 0;
-      boxBlink = false;
-      boxIsBlinking = true;
-      cursor("tiny");
-    } else if (state === "placing") {
-      // Get finished turn data.
-      turn.push(selection.x, selection.y);
-
-      // Only add turn if we actually moved.
-      if (turn[0] !== turn[4] || turn[1] !== turn[5]) {
-        // And the destination is inside of the screen.
-        const dx = turn[4];
-        const dy = turn[5];
-        const dw = turn[2];
-        const dh = turn[3];
-
-        const sx = 0;
-        const sy = 0;
-        const sw = screen.width;
-        const sh = screen.height - 1;
-
-        if ((dx + dw <= 0 || dx >= sw || dy + dh <= 0 || dy >= sh) === false) {
-          // And we have enough pixels.
-          if (turns.length < history.width / 2) {
-            turns.push(turn); // x, y, w, h, endx, endy
-          } else {
-            console.log("Turn buffer is full!");
-          }
-        }
-      }
-      boxIsBlinking = false;
-      state = "rest";
-      cursor("precise");
-    }
-  }
-}
-
-// 🎨 Paint
+// 🎨 Paint (Runs once per display refresh rate)
 export function paint({
   ink,
   copy,
@@ -220,12 +159,74 @@ export function paint({
   paste(history, 0, screen.height - 1);
 }
 
-// 💗 Beat
+// Act (Runs once per user interaction)
+export function act({ screen, cursor, geo, event: e }) {
+  // Start drag.
+  if (e.is("touch")) {
+    if (state === "rest") {
+      state = "selecting";
+      cursor("none");
+      select(geo, { x: e.x, y: e.y, w: 1, h: 1 }, sketch);
+    }
+    if (state === "selected") state = "placing";
+  }
+
+  // Continue drag.
+  if (e.is("draw")) {
+    if (state === "selecting") {
+      select(geo, e.drag, sketch);
+    } else if (state === "placing") {
+      selection.move(e.delta);
+      cursor("tiny");
+    }
+  }
+
+  // End drag.
+  if (e.is("lift")) {
+    if (state === "selecting" && selection) {
+      state = "selected";
+      blinkCount = 0;
+      boxBlink = false;
+      boxIsBlinking = true;
+      cursor("tiny");
+    } else if (state === "placing") {
+      // Get finished turn data.
+      turn.push(selection.x, selection.y);
+      // Only add turn if we actually moved.
+      if (turn[0] !== turn[4] || turn[1] !== turn[5]) {
+        // And the destination is inside of the screen.
+        const dx = turn[4];
+        const dy = turn[5];
+        const dw = turn[2];
+        const dh = turn[3];
+
+        const sx = 0;
+        const sy = 0;
+        const sw = screen.width;
+        const sh = screen.height - 1;
+
+        if ((dx + dw <= 0 || dx >= sw || dy + dh <= 0 || dy >= sh) === false) {
+          // And we have enough pixels.
+          if (turns.length < history.width / 2) {
+            turns.push(turn); // x, y, w, h, endx, endy
+          } else {
+            console.log("Turn buffer is full!");
+          }
+        }
+      }
+      boxIsBlinking = false;
+      state = "rest";
+      cursor("precise");
+    }
+  }
+}
+
+// 💗 Beat (Runs once per bpm)
 export function beat($api) {
   // TODO: Play a sound here!
 }
 
-// 📚 Library
+// 📚 Library (Useful functions used throughout the program)
 
 // This runs every time a selection needs to be made or updated.
 function select(geo, { x, y, w, h }, { width, height }) {
