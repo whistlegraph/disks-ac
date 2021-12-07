@@ -1,25 +1,31 @@
-// 🥾 Boot
-export function boot($api) {
+// Blank, 2021.11.28.03.04
+
+// 🥾 Boot (Runs once before first paint and sim)
+function boot($api) {
   // TODO: Runs only once!
 }
 
-// 🧮 Simulate
-export function sim($api) {
+// 🧮 Simulate (Runs once per logic frame (120fps)).
+function sim($api) {
   // TODO: Move a ball here!
 }
 
-// 🎨 Paint
-export function paint($api) {
-  const { color, clear, num } = $api;
-
-  color(num.randInt(255), num.randInt(255), num.randInt(255));
-  clear();
+// 🎨 Paint (Runs once per display refresh rate)
+function paint({ wipe, num: { randInt: r } }) {
+  wipe(r(255), r(255), r(255));
 }
 
-// 💗 Beat
-export function beat($api) {
+// ✒ Act (Runs once per user interaction)
+function act({ event }) {
+  // console.log(event);
+}
+
+// 💗 Beat (Runs once per bpm)
+function beat($api) {
   // TODO: Play a sound here!
 }
 
-// 📚 Library
+// 📚 Library (Useful functions used throughout the program)
 // ...
+
+export { boot, sim, paint, act, beat };

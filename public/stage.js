@@ -4,30 +4,13 @@
 // * See: https://www.notion.so/whistlegraph/9abf76a4437a46199087176bd06657ea?v=98b5d3a8965e47d9a4c177dd5147960d
 
 // Graphics
-const blocks = {};
 let cam, arrow;
 
 const camZ = 10;
 
-const blocksX = {
-  A: -6,
-  B: -4,
-  C: -2,
-  D: 0,
-  E: 2,
-  F: 4,
-  G: 6,
-};
-
-const blocksY = {
-  A: 0,
-  B: 0,
-  C: 0,
-  D: 0,
-  E: 0,
-  F: 0,
-  G: 0,
-};
+const blocks = {};
+const blocksX = { A: -6, B: -4, C: -2, D: 0, E: 2, F: 4, G: 6 };
+const blocksY = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0 };
 
 const blocksColors = {
   A: [255, 0, 0],

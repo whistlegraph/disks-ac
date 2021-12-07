@@ -159,7 +159,7 @@ export function paint({
   paste(history, 0, screen.height - 1);
 }
 
-// Act (Runs once per user interaction)
+// ✒ Act (Runs once per user interaction)
 export function act({ screen, cursor, geo, event: e }) {
   // Start drag.
   if (e.is("touch")) {
