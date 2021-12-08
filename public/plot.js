@@ -2,9 +2,10 @@
 // A tool for drawing pixel-perfect vector art with utilities for saving,
 // loading and editing.
 
+// TODO: Make clickable grid.
+
 // TODO: Draw and store all the glyphs for a printable font.
 // -- Use this font as a reference: https://github.com/slavfox/Cozette/blob/master/img/characters.png
-
 // * Add hotkeys / alt etc. for drawing straight lines.
 
 const { min, floor } = Math;
@@ -19,24 +20,16 @@ function boot({ resize, cursor, geo: { Grid } }) {
 
 // 🎨 Paint (Runs once per display refresh rate)
 function paint({ pen, wipe, ink }) {
-  wipe(10, 50, 25);
+  // Clear the background and draw a grid with an outline.
+  wipe(10, 50, 25).ink(255, 0, 0).grid(g).ink(64, 128).box(g.scaled, "outline");
 
-  // TODO: Make clickable grid.
+  // Grab the grid square under the pen, continuing if it exists.
+  const sq = g.under(pen);
+  if (!sq) return false;
 
-  // Draw and outline the grid.
-  ink(255, 0, 0).grid(g).ink(64, 128).box(g.scaled, "outline");
-
-  const s = g.squareUnder(pen); // Get the square under the pen
-  if (!s) return false; // or stop painting
-
-  ink(255, 128).box(s, "inline"); // Lightly shade grid square
-
-  // TODO: Turn this into a generic drawing function? 2021.12.06.21.27
-  // - Call function dot() which draws a circle of a given size at the center
-  //   of the box?
-
-  const offset = g.squareCenter; // Draw center point of grid square
-  if (offset > 0) ink(0, 255, 0).plot(s.x + offset, s.y + offset);
+  // Outline the grid square under the pen, highlighting the center.
+  ink(255, 128).box(sq, "inline");
+  g.center.forEach((p) => ink(0, 255, 0).plot(sq.x + p.x, sq.y + p.y));
 }
 
 // ✒ Act (Runs once per user interaction)
