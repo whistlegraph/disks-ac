@@ -108,7 +108,7 @@ export function boot({
     loopSong = true;
   }
 
-  cam = new Camera(80);
+  cam = new Camera(40);
 
   const aspectRatio = screen.width / screen.height;
 
@@ -123,8 +123,14 @@ export function boot({
   for (const l of "ABCDEFG") // Add each colored block.
     blocks[l] = new Form(
       SQUARE,
-      { texture: pixels(32, 32, () => wipe(...blocksColors[l])) },
-      [blocksX[l], 0, 4]
+      // { texture: pixels(32, 32, () => wipe(...blocksColors[l])) },
+      {
+        texture: pixels(32, 32, (w, h) => {
+          wipe(255, 0, 0).ink(0).line(0, 0, w, h);
+        }),
+      },
+      [blocksX[l], 0, 4], // Position
+      [0, 0, 30] // Rotation
     );
 
   each(blocks, (b) => (b.alpha = 0.25));
@@ -212,6 +218,10 @@ export function paint({
 
   // 2. Blocks & Arrow
   each(blocks, (block) => block.graph(cam)); // Paint every block.
+
+  each(blocks, (block) => {
+    block.rotation[1] += 1;
+  }); // Paint every block.
 
   // TODO: Fix this for looping.
   if (noteI < 0 && noteI > -countIn) {

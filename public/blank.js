@@ -1,8 +1,9 @@
 // Blank, 2021.11.28.03.04
 
 // 🥾 Boot (Runs once before first paint and sim)
-function boot($api) {
+function boot({ resize }) {
   // TODO: Runs only once!
+  // resize(50, 20);
 }
 
 // 🧮 Simulate (Runs once per logic frame (120fps)).
@@ -11,8 +12,9 @@ function sim($api) {
 }
 
 // 🎨 Paint (Runs once per display refresh rate)
-function paint({ wipe, num: { randInt: r } }) {
-  wipe(r(255), r(255), r(255));
+function paint({ wipe, num: { randInt: r }, screen }) {
+  wipe(0);
+  // wipe(r(255), r(255), r(255)).ink(0).line(0, 0, screen.width, screen.height);
 }
 
 // ✒ Act (Runs once per user interaction)
