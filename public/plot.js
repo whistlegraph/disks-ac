@@ -4,17 +4,20 @@
 // TODO
 // * Draw and store all the glyphs for a printable font.
 
-// *Current* Add a clickable save "checkmark" button and move the grid up.
+// *Current* Add support for loading and rendering a drawing.
+//   [ ] -- load & decode drawing
+//   [ ] -- render drawing
 
-// -- Wire up checkmark button to save the JSON to a server or copy it to clipboard.
+// -- Render Save button properly by making it load a green checkmark!?
 
 // -- Add support for dots in addition to lines.
 
-// Make the necessary symbols for encoding works in the Animated Notation piece.
+// * Add hotkeys / alt etc. for drawing straight lines.
+
+// Make the necessary symbols for encoding works in the Animated Notation piece,
+// and typing all the keys on the keyboard.
 
 // -- Use this font as a reference: https://github.com/slavfox/Cozette/blob/master/img/characters.png
-
-// * Add hotkeys / alt etc. for drawing straight lines.
 
 // NOTES
 // This software is written in layers of APIs... what's the layer that comes
@@ -23,7 +26,9 @@
 const { min, floor } = Math;
 
 let g; // Our virtual drawing guide.
-let save; // A button to save our drawing.
+let save; // A button to save drawings.
+let open; // ..and to open them.
+let opening = false; // Disables open button if in the process of uploading.
 
 // For tracking and storing each line as its drawn.
 let startMark = false;
@@ -49,13 +54,30 @@ const colors = {
   ghostSquare: [100, 50],
 };
 
+const drawings = {};
+
 // 🥾 Boot (Runs once before first paint and sim)
-function boot({ resize, cursor, geo: { Grid }, ui: { Button } }) {
+function boot({
+  resize,
+  cursor,
+  geo: { Grid },
+  ui: { Button },
+  net: { host, preload },
+}) {
   resize(64, 64);
   cursor("tiny");
   g = new Grid(8, 5, 16, 16, 3);
   save = new Button(41, 64 - 8, 16, 6);
+  open = new Button(7, 64 - 8, 16, 6);
   needsPaint = true;
+  preload("drawings/default.json").then(decode); // Preload drawing.
+  // Preload save button icon.
+  preload("drawings/save_icon.json").then((r) => {
+    drawings.save = r;
+    needsPaint = true;
+  });
+
+  // TODO: Preload the open icon. 2021.12.12.22.48
 }
 
 // 🎨 Paint (Runs once per display refresh rate)
@@ -77,7 +99,7 @@ function paint({ pen, pan, unpan, grid, line, pixels, wipe, ink }) {
       g,
       pixels(g.box.w, g.box.h, () => {
         ink(colors.lines);
-        lines.forEach((l) => line(l[0].gx, l[0].gy, l[1].gx, l[1].gy));
+        lines.forEach((l) => line(...l));
       })
     );
   }
@@ -92,9 +114,9 @@ function paint({ pen, pan, unpan, grid, line, pixels, wipe, ink }) {
 
   // Draw thin line for all previously added lines.
   pan(g.centerOffset);
-  lines.forEach((l) =>
-    ink(colors.innerLine).line(l[0].x, l[0].y, l[1].x, l[1].y)
-  );
+  lines.forEach((l) => {
+    ink(colors.innerLine).line(...g.get(l[0], l[1]), ...g.get(l[2], l[3]));
+  });
 
   if (startMark) {
     // Inline preview between grid squares.
@@ -112,11 +134,39 @@ function paint({ pen, pan, unpan, grid, line, pixels, wipe, ink }) {
     ink(255, 0, 0, 20).box(save.box, "outline");
   }
 
+  //    Icon
+  if (drawings.save) {
+    // TODO: Move this draw function elsewhere? 2021.12.12.22.49
+    //       draw(drawings?.save, save.box.x, save.box.y, 3);
+
+    function draw(drawing, x, y, scale = 3) {
+      pan(x, y);
+
+      ink(255);
+      drawing.commands.forEach(({ name, args }) => {
+        args = args.map((a) => a * scale); // TODO: instead of pan, also add scale.
+
+        if (name === "line") line(...args);
+      });
+
+      unpan();
+    }
+
+    draw(drawings.save, save.box.x, save.box.y, 3);
+  }
+
+  // C. Open Button
+  if (open.down) {
+    ink(0, 0, 255, 20).box(open.box, "inline");
+  } else {
+    ink(0, 0, 255, 20).box(open.box, "outline");
+  }
+
   needsPaint = false;
 }
 
 // ✒ Act (Runs once per user interaction)
-function act({ event: e, download }) {
+function act({ event: e, download, upload, num: { timestamp } }) {
   // Add first point if we touch in the grid.
   if (e.is("touch")) {
     g.under(e, (sq) => {
@@ -133,26 +183,56 @@ function act({ event: e, download }) {
     g.under(e, (sq) => {
       if (sq.gx === points[0].gx && sq.gy === points[0].gy) return;
       points.push(sq);
-      lines.push(points.slice());
+
+      lines.push([points[0].gx, points[0].gy, points[1].gx, points[1].gy]);
     });
     points.length = 0;
   }
 
   // Relay event info to the save button.
-  save.act(e, () => {
-    download(encodeDrawing());
-  });
+  save.act(e, () => download(encode(timestamp())));
+
+  if (!opening) {
+    open.act(e, () => {
+      upload(".json")
+        .then((data) => {
+          decode(JSON.parse(data));
+          opening = false;
+        })
+        .catch((err) => {
+          console.error("JSON load error:", err);
+        });
+      opening = true;
+    });
+  }
 
   needsPaint = true;
 }
 
 // 📚 Library (Useful functions used throughout the program)
 
-function encodeDrawing() {
-  // Sanitize lines for exporting into a file format.
-  // What should the syntax or programmability of this format be?
+// Encode all drawing data (lines) into a single file format.
+function encode(filename) {
+  // Use JSON to build an AST. 2021.12.11.00.02
+  filename += ".json";
 
+  const data = JSON.stringify({
+    resolution: [g.box.w, g.box.h],
+    date: new Date().toISOString(),
+    commands: lines.map((l, i) => ({
+      name: "line",
+      args: l,
+    })),
+  });
+
+  return { filename, data };
+
+  // *Future Plans*
+  // TODO: Use a custom file format instead of JSON? 2021.12.11.19.02
+
+  // What should the syntax or programmability of this format be?
   /* Maybe something like?
+
   16x16
   C 255 0 0
   L 1 2 11 11
@@ -161,30 +241,17 @@ function encodeDrawing() {
 
   // Or I could use turtle graphics?
 
-  // For now I'll just use JSON to build an AST. 2021.12.11.00.02
-  const out = {
-    resolution: [g.box.w, g.box.h],
-    commands: [],
-  };
+  // TODO: Save this somehow on the network? 2021.12.11.17.01
+  // - To clipboard? (Get general cliboard access working.)
+  // - Directly on-chain?
+  // - On my own server via or Pinata / DO Spaces using web3.eth as auth?
 
-  lines.forEach((l, i) => {
-    out.commands.push({
-      name: "line",
-      args: [l[0].gx, l[0].gy, l[1].gx, l[1].gy],
-    });
-  });
-
-  // TODO: Add date/timecode to drawing.json or generate a unique code?
-
-  return { filename: "drawing.json", data: JSON.stringify(out) };
-
-  // TODO: Save this somehow on the network (use web3 auth)? 2021.12.11.17.01
-  // - To clipboard?
-  // - To blockchain?
-
+  // Fetch example:
+  // This would have to be modified to fit both production and development
+  // environments. 2021.12.11.19.07
   /*
   (async () => {
-    const rawResponse = await fetch("https://httpbin.org/post", {
+    const rawResponse = await fetch("https://aesthetic.computer/post", {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -197,6 +264,17 @@ function encodeDrawing() {
     console.log(content);
   })();
   */
+}
+
+// Read preparsed json data to step through the commands and fill in "lines".
+function decode(drawing) {
+  lines.length = 0; // Reset the drawing's line data.
+
+  // Repopulate it with the loaded drawing.
+  drawing.commands.forEach(({ name, args }) => {
+    if (name === "line") lines.push(args);
+  });
+  needsPaint = true;
 }
 
 export { boot, paint, act };
