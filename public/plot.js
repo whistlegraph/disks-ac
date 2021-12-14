@@ -1,32 +1,27 @@
 // Plot, 2021.12.05.13.27
-// A tool for editing pixel-perfect vector art.
+// A tool for editing pixel-perfect vector art / glyphs, and icons.
 
 // TODO
-// * Draw and store all the glyphs for a printable font.
+// Make the necessary symbols for encoding works in the Animated Notation piece.
 
-// *Current* Add support for loading and rendering a drawing.
-//   [ ] -- load & decode drawing
-//   [ ] -- render drawing
+//  -- Add anchor point to be used for the initial pan and also rotation.
+// -- Add support for single click dots / points, in addition to straight lines.
 
-// -- Render Save button properly by making it load a green checkmark!?
+// * Add hotkeys / alt etc. for drawing straight lines on one axis, tabbing and
+//   clicking buttons, with global hotkeys for quitting and returning to the prompt.
 
-// -- Add support for dots in addition to lines.
+// * Draw and store all the glyphs for a typable font.
+//    -- Use this font as a reference: https://github.com/slavfox/Cozette/blob/master/img/characters.png
 
-// * Add hotkeys / alt etc. for drawing straight lines.
-
-// Make the necessary symbols for encoding works in the Animated Notation piece,
-// and typing all the keys on the keyboard.
-
-// -- Use this font as a reference: https://github.com/slavfox/Cozette/blob/master/img/characters.png
-
-// NOTES
+// *Remarks*
 // This software is written in layers of APIs... what's the layer that comes
 // out of a disk... could I write a scripting language / DSL layer on top here?
+// 2021.12.14.13.08
 
 const { min, floor } = Math;
 
 let g; // Our virtual drawing guide.
-let save; // A button to save drawings.
+let save; // A button to save drtwings.
 let open; // ..and to open them.
 let opening = false; // Disables open button if in the process of uploading.
 
@@ -54,7 +49,7 @@ const colors = {
   ghostSquare: [100, 50],
 };
 
-const drawings = {};
+const plots = {}; // Stored preloaded drawings.
 
 // 🥾 Boot (Runs once before first paint and sim)
 function boot({
@@ -72,8 +67,8 @@ function boot({
   needsPaint = true;
   preload("drawings/default.json").then(decode); // Preload drawing.
   // Preload save button icon.
-  preload("drawings/save_icon.json").then((r) => {
-    drawings.save = r;
+  preload("drawings/save_open_icon.json").then((r) => {
+    plots.icon = r;
     needsPaint = true;
   });
 
@@ -81,11 +76,10 @@ function boot({
 }
 
 // 🎨 Paint (Runs once per display refresh rate)
-function paint({ pen, pan, unpan, grid, line, pixels, wipe, ink }) {
+function paint({ pen, pan, unpan, grid, line, pixels, wipe, ink, paintCount }) {
   if (!needsPaint) return false;
 
   // A. Grid
-
   // Clear the background and draw a grid with an outline.
   wipe(colors.background)
     .ink(colors.grid)
@@ -127,40 +121,13 @@ function paint({ pen, pan, unpan, grid, line, pixels, wipe, ink }) {
     if (!sq.in) ink(colors.ghostSquare).box(sq, "inline");
   } else unpan();
 
-  // B. Save Button
-  if (save.down) {
-    ink(255, 0, 0, 20).box(save.box, "inline");
-  } else {
-    ink(255, 0, 0, 20).box(save.box, "outline");
-  }
+  // B. Open Button
+  ink(0, 0, 255, 20).box(open.box, open.down ? "inline" : "outline"); // Border
+  ink(0, 0, 255, 20).draw(plots.icon, open.box.x + 14, open.box.y + 6, 3, 180); // Icon
 
-  //    Icon
-  if (drawings.save) {
-    // TODO: Move this draw function elsewhere? 2021.12.12.22.49
-    //       draw(drawings?.save, save.box.x, save.box.y, 3);
-
-    function draw(drawing, x, y, scale = 3) {
-      pan(x, y);
-
-      ink(255);
-      drawing.commands.forEach(({ name, args }) => {
-        args = args.map((a) => a * scale); // TODO: instead of pan, also add scale.
-
-        if (name === "line") line(...args);
-      });
-
-      unpan();
-    }
-
-    draw(drawings.save, save.box.x, save.box.y, 3);
-  }
-
-  // C. Open Button
-  if (open.down) {
-    ink(0, 0, 255, 20).box(open.box, "inline");
-  } else {
-    ink(0, 0, 255, 20).box(open.box, "outline");
-  }
+  // C. Save Button
+  ink(255, 0, 0, 20).box(save.box, save.down ? "inline" : "outline"); // Border
+  ink(255, 0, 0, 80).draw(plots.icon, save.box.x + 1, save.box.y, 3); // Icon
 
   needsPaint = false;
 }
@@ -216,14 +183,19 @@ function encode(filename) {
   // Use JSON to build an AST. 2021.12.11.00.02
   filename += ".json";
 
-  const data = JSON.stringify({
-    resolution: [g.box.w, g.box.h],
-    date: new Date().toISOString(),
-    commands: lines.map((l, i) => ({
-      name: "line",
-      args: l,
-    })),
-  });
+  // Create a simple JSON format that is indented by 2 characters.
+  const data = JSON.stringify(
+    {
+      resolution: [g.box.w, g.box.h],
+      date: new Date().toISOString(),
+      commands: lines.map((l, i) => ({
+        name: "line",
+        args: l,
+      })),
+    },
+    null,
+    2
+  );
 
   return { filename, data };
 
