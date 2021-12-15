@@ -2,16 +2,14 @@
 // A tool for editing pixel-perfect vector art / glyphs, and icons.
 
 // TODO
-// Make the necessary symbols for encoding works in the Animated Notation piece.
-
-//  -- Add anchor point to be used for the initial pan and also rotation.
+// -- Add anchor point to be used for the initial pan and also rotation.
 // -- Add support for single click dots / points, in addition to straight lines.
 
 // * Add hotkeys / alt etc. for drawing straight lines on one axis, tabbing and
 //   clicking buttons, with global hotkeys for quitting and returning to the prompt.
 
 // * Draw and store all the glyphs for a typable font.
-//    -- Use this font as a reference: https://github.com/slavfox/Cozette/blob/master/img/characters.png
+//   -- Use this font as a reference: https://github.com/slavfox/Cozette/blob/master/img/characters.png
 
 // *Remarks*
 // This software is written in layers of APIs... what's the layer that comes
@@ -21,7 +19,7 @@
 const { min, floor } = Math;
 
 let g; // Our virtual drawing guide.
-let save; // A button to save drtwings.
+let save; // A button to save drawings.
 let open; // ..and to open them.
 let opening = false; // Disables open button if in the process of uploading.
 
@@ -38,7 +36,7 @@ let needsPaint = false; // Only render after a user interaction.
 // TODO: Can eventually be shifted around somehow with the javascript console or
 // a mouse and then reprinted for pasting back in. 2021.12.10.23.02
 const colors = {
-  background: [0, 10, 0],
+  background: [0, 20, 0],
   grid: [0, 100, 0],
   gridOutline: [255, 255, 0, 32],
   lines: [0, 220, 220, 50],
@@ -47,6 +45,8 @@ const colors = {
   activeSquareInline: [255, 128],
   activeSquareCenter: [0, 255, 0],
   ghostSquare: [100, 50],
+  save: [255, 0, 0, 80],
+  open: [0, 0, 255, 80],
 };
 
 const plots = {}; // Stored preloaded drawings.
@@ -62,8 +62,8 @@ function boot({
   resize(64, 64);
   cursor("tiny");
   g = new Grid(8, 5, 16, 16, 3);
-  save = new Button(41, 64 - 8, 16, 6);
-  open = new Button(7, 64 - 8, 16, 6);
+  save = new Button(41, 64 - 8, 15, 6);
+  open = new Button(8, 64 - 8, 15, 6);
   needsPaint = true;
   preload("drawings/default.json").then(decode); // Preload drawing.
   // Preload save button icon.
@@ -122,12 +122,12 @@ function paint({ pen, pan, unpan, grid, line, pixels, wipe, ink, paintCount }) {
   } else unpan();
 
   // B. Open Button
-  ink(0, 0, 255, 20).box(open.box, open.down ? "inline" : "outline"); // Border
-  ink(0, 0, 255, 20).draw(plots.icon, open.box.x + 14, open.box.y + 6, 3, 180); // Icon
+  ink(colors.open).box(open.box, open.down ? "inline" : "outline"); // Border
+  ink(colors.open).draw(plots.icon, open.box.x + 13, open.box.y + 6, 3, 180); // Icon
 
   // C. Save Button
-  ink(255, 0, 0, 20).box(save.box, save.down ? "inline" : "outline"); // Border
-  ink(255, 0, 0, 80).draw(plots.icon, save.box.x + 1, save.box.y, 3); // Icon
+  ink(colors.save).box(save.box, save.down ? "inline" : "outline"); // Border
+  ink(colors.save).draw(plots.icon, save.box.x + 1, save.box.y, 3); // Icon
 
   needsPaint = false;
 }
