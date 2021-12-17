@@ -1,17 +1,6 @@
 // Plot, 2021.12.05.13.27
 // A tool for editing pixel-perfect vector art / glyphs, and icons.
 
-// *Current* Add support for single click dots / points, in addition to straight lines.
-
-// TODO: * Reload disk when the file changes.
-//         (This should work in production via a secondary disk server.)
-//       * Reload system (browser) when any other files change.
-
-// TODO: Add versioning of some kind for disk files, using a comment at the top.
-//       * This would eventually allow me to completely change from JavaScript.
-//       * More importantly, I could reload a different commit of the system,
-//         that matches the query.
-
 // TODO
 // * Draw and store all the glyphs for a typeable font.
 //   -- Use this font as a reference: https://github.com/slavfox/Cozette/blob/master/img/characters.png
@@ -61,13 +50,11 @@ const colors = {
 
 const plots = {}; // Stored preloaded drawings.
 
-const width = 6; // Starting size.
-const height = 10;
-const scale = 5;
-
-// const lowercaseTopline = 3;
-
-const abcBaseline = 8;
+let width = 6; // Starting size.
+let height = 10;
+let scale = 5;
+const abc123Baseline = 8;
+const typography = false;
 
 // 🥾 Boot (Runs once before first paint and sim)
 function boot({
@@ -76,10 +63,18 @@ function boot({
   geo: { Grid },
   ui: { Button },
   net: { host, preload },
+  query,
 }) {
   resize(64, 64);
   cursor("tiny");
-  g = new Grid(17, 2, width, height, scale);
+
+  // Read some basic query parameters for configuring the resolution.
+  const params = new URLSearchParams(query);
+  width = params.get("width") || width;
+  height = params.get("height") || height;
+  scale = params.get("scale") || scale;
+
+  g = new Grid(8, 4, width, height, scale);
   save = new Button(41, 64 - 8, 15, 6);
   open = new Button(8, 64 - 8, 15, 6);
   needsPaint = true;
@@ -166,11 +161,10 @@ function paint({
   } else unpan();
 
   // Render typographic guides.
-  // TODO: Does line actually work intuitively enough? 2021.12.16.17.36
-
-  const y = g.scaled.y + abcBaseline * g.scale;
-
-  ink(255, 200, 200, 20).line(0, y, screen.width, y);
+  if (typography) {
+    const y = g.scaled.y + abc123Baseline * g.scale;
+    ink(255, 200, 200, 20).line(0, y, screen.width, y);
+  }
 
   // B. 🌟 Open Button
   ink(colors.open).box(open.box, open.down ? "inline" : "outline"); // Border

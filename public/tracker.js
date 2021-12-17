@@ -2,13 +2,8 @@
 // A tool for composing, playing, and following along with 12 tones.
 // Designed in collaboration w/ Oliver Laumann + Mija Milovic
 
-// TODO: Make a toolbar system.
-
-// TODO: Make a data structure and interaction to plot squares in the grid.
-
-// TODO: Design a number of symbols
-//       in their lowest resolution possible?
-
+// *Current*
+// TODO: Make drawings for the toolbar and button symbols and set them.
 //       +-
 //       ABCDEFGHIJKL, 0-9
 //       * Toolbar Contents*
@@ -18,7 +13,12 @@
 //       - -- Line: background color change / all together.
 //       - BPM - Adds a thick line to the grid and puts a new number on the right.
 
-//  TODO: Preload and add all these symbols.
+// TODO: Code up a modal tool system for switching tools, then start implementing
+//       them.
+
+// TODO: Make a data structure and interaction to plot squares in the grid.
+
+// TODO: Preload and add all these symbols.
 
 const { max, min } = Math;
 

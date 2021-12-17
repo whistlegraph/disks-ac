@@ -94,7 +94,7 @@ export function boot({
   // Load some initial parameters.
 
   // Change from default BPM
-  let params = new URLSearchParams(query);
+  const params = new URLSearchParams(query);
   BPM = params.get("bpm") || BPM;
 
   // Change from default melody
