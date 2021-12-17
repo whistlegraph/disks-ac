@@ -2,8 +2,13 @@
 // A tool for composing, playing, and following along with 12 tones.
 // Designed in collaboration w/ Oliver Laumann + Mija Milovic
 
-// TODO: *Current* Design a number of symbols
-//                 in their lowest resolution possible?
+// TODO: Make a toolbar system.
+
+// TODO: Make a data structure and interaction to plot squares in the grid.
+
+// TODO: Design a number of symbols
+//       in their lowest resolution possible?
+
 //       +-
 //       ABCDEFGHIJKL, 0-9
 //       * Toolbar Contents*
@@ -42,8 +47,16 @@ let score;
 const buttons = {};
 let toolbar;
 
+// Typography
+let numbers = [];
+
 // 🥾 Boot (Runs once before first paint and sim)
-function boot({ resize, geo: { Box, Grid }, ui: { Button } }) {
+function boot({
+  resize,
+  geo: { Box, Grid },
+  ui: { Button },
+  net: { preload },
+}) {
   resize(160, 90); // 16x9
   const scale = 9;
   style.addMinusHeight = scale;
@@ -57,21 +70,44 @@ function boot({ resize, geo: { Box, Grid }, ui: { Button } }) {
   addMinusLayout();
 
   toolbar = new Grid(3, 3, 1, 6, scale);
-}
 
-// 🧮 Simulate (Runs once per logic frame (120fps)).
-function sim($api) {
-  // TODO: Move a ball here!
+  // Preload 0-9 symbols.
+  // TODO: How to know when every preload finishes? 2021.12.16.18.55
+  // TODO: Move these drawings into a system folder?
+  [
+    "0 - 2021.12.16.18.28.06",
+    "1 - 2021.12.16.17.56.44",
+    "2 - 2021.12.16.17.59.01",
+    "3 - 2021.12.16.17.59.52",
+    "4 - 2021.12.16.18.00.56",
+    "5 - 2021.12.16.18.01.27",
+    "6 - 2021.12.16.18.02.26",
+    "7 - 2021.12.16.18.02.50",
+    "8 - 2021.12.16.18.03.31",
+    "9 - 2021.12.16.18.04.15",
+  ].forEach((number, i) => {
+    preload(`drawings/numbers/${number}.json`).then((r) => {
+      numbers[i] = r;
+    });
+  });
 }
 
 // 🎨 Paint (Runs once per display refresh rate)
-// TODO: Add n `layer(1-n, f)` or `order` function that allows me to delay paint and run
-//       sets of drawing commands in an arbitrary order. Explore what kinds of
-//       interesting effects can I produce with this in pseudocode before
-//       implementing. 2021.12.15.16.36
-//       - Technically layer 0 would be anything that doesn't use layer?
-function paint({ wipe, ink, pan, unpan, layer }) {
+function paint({ wipe, ink, layer, screen }) {
   wipe(0); // Make the background black.
+
+  // 0. *TEST* Write a test row of numbers.
+  // TODO: Extract this into a "write" or "print" method for graph. 2021.12.16.18.55
+  {
+    const startX = 3;
+    const width = 6;
+    const startY = screen.height - 11;
+    const scale = 1;
+
+    numbers.forEach((number, i) => {
+      ink(255).draw(number, startX + width * scale * i, startY, scale);
+    });
+  }
 
   // ✔ 1. Top Row: for knowing what notes each column represents, and
   //             being able to toggle columns.
@@ -84,11 +120,13 @@ function paint({ wipe, ink, pan, unpan, layer }) {
 
   // ✔ 2. Composition: for placing and removing notes. Scrollable.
   layer(0);
+
   ink(255).grid(score);
   // wipe(r(255), r(255), r(255)).ink(0).line(0, 0, screen.width, screen.height);
 
   // ✔ 2a. Scrolling UI
-  // ...
+  // TODO: Maybe the mouse cursor should default to a scrolling one when
+  //       it is over the background?
 
   // ✔ 2b. Plus / Minus Rows
   ink(255, 0, 0, 50).box(buttons.minus.box);
@@ -137,6 +175,11 @@ function act({ event: e }) {
   });
 }
 
+// 🧮 Simulate (Runs once per logic frame (120fps)).
+// function sim($api) {
+// TODO: Move a ball here!
+// }
+
 // 💗 Beat (Runs once per bpm)
 function beat($api) {
   // TODO: Play a sound here!
@@ -144,7 +187,6 @@ function beat($api) {
 
 // 📚 Library (Useful functions used throughout the program)
 function scrollY(y) {
-  const scrollee = score.box;
   score.box.y = min(notes.scale, score.box.y + y);
   const scrollHeight = score.scaled.h - score.scale - style.addMinusHeight;
   if (score.box.y < -scrollHeight) score.box.y = -scrollHeight;
@@ -159,4 +201,4 @@ function addMinusLayout() {
   buttons.add.box.y = score.scaled.bottom;
 }
 
-export { boot, sim, paint, act, beat };
+export { boot, paint, act, beat };

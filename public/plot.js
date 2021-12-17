@@ -1,15 +1,25 @@
 // Plot, 2021.12.05.13.27
 // A tool for editing pixel-perfect vector art / glyphs, and icons.
 
+// *Current* Add support for single click dots / points, in addition to straight lines.
+
+// TODO: * Reload disk when the file changes.
+//         (This should work in production via a secondary disk server.)
+//       * Reload system (browser) when any other files change.
+
+// TODO: Add versioning of some kind for disk files, using a comment at the top.
+//       * This would eventually allow me to completely change from JavaScript.
+//       * More importantly, I could reload a different commit of the system,
+//         that matches the query.
+
 // TODO
+// * Draw and store all the glyphs for a typeable font.
+//   -- Use this font as a reference: https://github.com/slavfox/Cozette/blob/master/img/characters.png
+
 // -- Add anchor point to be used for the initial pan and also rotation.
-// -- Add support for single click dots / points, in addition to straight lines.
 
 // * Add hotkeys / alt etc. for drawing straight lines on one axis, tabbing and
 //   clicking buttons, with global hotkeys for quitting and returning to the prompt.
-
-// * Draw and store all the glyphs for a typable font.
-//   -- Use this font as a reference: https://github.com/slavfox/Cozette/blob/master/img/characters.png
 
 // *Remarks*
 // This software is written in layers of APIs... what's the layer that comes
@@ -27,7 +37,7 @@ let opening = false; // Disables open button if in the process of uploading.
 let startMark = false;
 let currentLine;
 const points = [],
-  lines = [];
+  commands = [];
 
 let needsPaint = false; // Only render after a user interaction.
 // TODO: Do I need the equivalent of noLoop and then calling repaint
@@ -51,6 +61,14 @@ const colors = {
 
 const plots = {}; // Stored preloaded drawings.
 
+const width = 6; // Starting size.
+const height = 10;
+const scale = 5;
+
+// const lowercaseTopline = 3;
+
+const abcBaseline = 8;
+
 // 🥾 Boot (Runs once before first paint and sim)
 function boot({
   resize,
@@ -61,18 +79,16 @@ function boot({
 }) {
   resize(64, 64);
   cursor("tiny");
-  g = new Grid(8, 5, 16, 16, 3);
+  g = new Grid(17, 2, width, height, scale);
   save = new Button(41, 64 - 8, 15, 6);
   open = new Button(8, 64 - 8, 15, 6);
   needsPaint = true;
-  preload("drawings/default.json").then(decode); // Preload drawing.
+  // preload("drawings/default.json").then(decode); // Preload drawing.
   // Preload save button icon.
   preload("drawings/save_open_icon.json").then((r) => {
     plots.icon = r;
     needsPaint = true;
   });
-
-  // TODO: Preload the open icon. 2021.12.12.22.48
 }
 
 // 🎨 Paint (Runs once per display refresh rate)
@@ -85,11 +101,12 @@ function paint({
   painting,
   wipe,
   ink,
-  paintCount,
+  point,
+  screen,
 }) {
   if (!needsPaint) return false;
 
-  // A. Grid
+  // A. 🌟 Grid
   // Clear the background and draw a grid with an outline.
   wipe(colors.background)
     .ink(colors.grid)
@@ -98,12 +115,21 @@ function paint({
     .box(g.scaled, "outline");
 
   // Render all added lines by generating a bitmap and projecting it on a grid.
-  if (lines.length > 0) {
+  if (commands.length > 0) {
     grid(
       g,
       painting(g.box.w, g.box.h, (p) => {
         p.ink(colors.lines);
-        lines.forEach((l) => p.line(...l));
+        commands.forEach((c) => {
+          switch (c.length) {
+            case 2:
+              p.point(...c);
+              break;
+            case 4:
+              p.line(...c);
+              break;
+          }
+        });
       })
     );
   }
@@ -112,14 +138,22 @@ function paint({
   const sq = g.under(pen, (sq) => {
     ink(colors.activeSquareInline).box(sq, "inline");
     g.center.forEach((p) =>
-      ink(colors.activeSquareCenter).plot(sq.x + p.x, sq.y + p.y)
+      ink(colors.activeSquareCenter).point(sq.x + p.x, sq.y + p.y)
     );
   });
 
   // Draw thin line for all previously added lines.
   pan(g.centerOffset);
-  lines.forEach((l) => {
-    ink(colors.innerLine).line(...g.get(l[0], l[1]), ...g.get(l[2], l[3]));
+  ink(colors.innerLine);
+  commands.forEach((c) => {
+    switch (c.length) {
+      case 2:
+        point(...g.get(c[0], c[1]));
+        break;
+      case 4:
+        line(...g.get(c[0], c[1]), ...g.get(c[2], c[3]));
+        break;
+    }
   });
 
   if (startMark) {
@@ -131,11 +165,18 @@ function paint({
     if (!sq.in) ink(colors.ghostSquare).box(sq, "inline");
   } else unpan();
 
-  // B. Open Button
+  // Render typographic guides.
+  // TODO: Does line actually work intuitively enough? 2021.12.16.17.36
+
+  const y = g.scaled.y + abcBaseline * g.scale;
+
+  ink(255, 200, 200, 20).line(0, y, screen.width, y);
+
+  // B. 🌟 Open Button
   ink(colors.open).box(open.box, open.down ? "inline" : "outline"); // Border
   ink(colors.open).draw(plots.icon, open.box.x + 13, open.box.y + 6, 3, 180); // Icon
 
-  // C. Save Button
+  // C. 🌟 Save Button
   ink(colors.save).box(save.box, save.down ? "inline" : "outline"); // Border
   ink(colors.save).draw(plots.icon, save.box.x + 1, save.box.y, 3); // Icon
 
@@ -158,12 +199,16 @@ function act({ event: e, download, upload, num: { timestamp } }) {
   if (e.is("lift") && startMark) {
     startMark = false;
     g.under(e, (sq) => {
-      if (sq.gx === points[0].gx && sq.gy === points[0].gy) return;
-      points.push(sq);
-
-      lines.push([points[0].gx, points[0].gy, points[1].gx, points[1].gy]);
+      if (sq.gx === points[0].gx && sq.gy === points[0].gy) {
+        // If we only touched one point then add a point into the commands list.
+        commands.push([points[0].gx, points[0].gy]);
+      } else {
+        // If we made a line by dragging between two points then add a line.
+        points.push(sq);
+        commands.push([points[0].gx, points[0].gy, points[1].gx, points[1].gy]);
+      }
+      points.length = 0;
     });
-    points.length = 0;
   }
 
   // Relay event info to the save button.
@@ -198,10 +243,18 @@ function encode(filename) {
     {
       resolution: [g.box.w, g.box.h],
       date: new Date().toISOString(),
-      commands: lines.map((l, i) => ({
-        name: "line",
-        args: l,
-      })),
+      commands: commands.map((args, i) => {
+        let name;
+        switch (args.length) {
+          case 2:
+            name = "point";
+            break;
+          case 4:
+            name = "line";
+            break;
+        }
+        return { name, args };
+      }),
     },
     null,
     2
@@ -250,11 +303,12 @@ function encode(filename) {
 
 // Read preparsed json data to step through the commands and fill in "lines".
 function decode(drawing) {
-  lines.length = 0; // Reset the drawing's line data.
+  commands.length = 0; // Reset the drawing's line data.
 
   // Repopulate it with the loaded drawing.
   drawing.commands.forEach(({ name, args }) => {
-    if (name === "line") lines.push(args);
+    if (name === "line") commands.push(args);
+    else if (name === "point") commands.push(args);
   });
   needsPaint = true;
 }
