@@ -84,7 +84,7 @@ export function boot({
   query,
   Camera,
   Form,
-  pixels,
+  painting,
   SQUARE,
   TRIANGLE,
   wipe,
@@ -108,7 +108,7 @@ export function boot({
     loopSong = true;
   }
 
-  cam = new Camera(40);
+  cam = new Camera(80);
 
   const aspectRatio = screen.width / screen.height;
 
@@ -123,14 +123,8 @@ export function boot({
   for (const l of "ABCDEFG") // Add each colored block.
     blocks[l] = new Form(
       SQUARE,
-      // { texture: pixels(32, 32, () => wipe(...blocksColors[l])) },
-      {
-        texture: pixels(32, 32, (w, h) => {
-          wipe(255, 0, 0).ink(0).line(0, 0, w, h);
-        }),
-      },
-      [blocksX[l], 0, 4], // Position
-      [0, 0, 30] // Rotation
+      { texture: painting(32, 32, (p) => p.wipe(...blocksColors[l])) },
+      [blocksX[l], 0, 4] // Position
     );
 
   each(blocks, (b) => (b.alpha = 0.25));
@@ -138,7 +132,7 @@ export function boot({
   // Add indicator arrow.
   arrow = new Form(
     TRIANGLE,
-    { texture: pixels(32, 32, () => wipe(32)) },
+    { texture: painting(32, 32, (p) => p.wipe(32)) },
     [blocksX[notes[0].letter], 4, 4],
     [0, 0, 180],
     [0.7, 0.7, 1]
@@ -187,11 +181,12 @@ export function sim({
 export function paint({
   ink,
   wipe,
-  pixels,
+  painting,
   screen: { width, height },
   num: { lerp },
   help: { each },
   box,
+  form,
 }) {
   // if (freezeFrame === true) return false;
   const songFinished = melodyBeatsPlayed === melodyBeatsTotal + 1;
@@ -217,11 +212,7 @@ export function paint({
   wipe();
 
   // 2. Blocks & Arrow
-  each(blocks, (block) => block.graph(cam)); // Paint every block.
-
-  each(blocks, (block) => {
-    block.rotation[1] += 1;
-  }); // Paint every block.
+  each(blocks, (block) => form(block, cam)); // Paint every block.
 
   // TODO: Fix this for looping.
   if (noteI < 0 && noteI > -countIn) {
@@ -232,12 +223,12 @@ export function paint({
       arrow.position[1] = 2.25;
     }
 
-    arrow.graph(cam); // Paint arrow.
+    form(arrow, cam); // Paint arrow.
   }
 
   if (noteI > 0 && songFinished === false) {
     if (playDurationProgress === 0 && noteI < notes.length) {
-      arrow.texture = pixels(32, 32, (w, h) => {
+      arrow.texture = painting(32, 32, ({ wipe }) => {
         const light = [255, 255, 255].map((n) =>
           lerp(0, n, instrumentProgress)
         );
@@ -251,7 +242,6 @@ export function paint({
       const originalArrowY = 4;
       const newArrowY = lerp(originalArrowY, 2.25, instrumentProgress);
       arrow.position[1] = newArrowY;
-      // arrow.graph(cam); // Paint arrow.
     }
   }
 
@@ -360,7 +350,7 @@ export function beat({
   help: { every, each, choose, repeat },
   sound: { bpm, time, square },
   num: { lerp, Track },
-  graph: { pixels, ink, wipe, line },
+  graph: { painting, ink, wipe, line },
 }) {
   bpm(BPM);
 
@@ -448,12 +438,11 @@ export function beat({
 
       // Fill block up with colored lines if it is repeating.
       if (plays.length > 1) {
-        blocks[letter].texture = pixels(32, 32, (w) => {
+        blocks[letter].texture = painting(32, 32, ({ wipe, line, width }) => {
           const dark = blocksColors[letter].map((n) => lerp(0, n, 0.5));
-          wipe(...dark);
-          ink(...blocksColors[letter]);
-          const h = Math.floor(lerp(0, 32, (playIndex + 1) / plays.length));
-          for (let y = 0; y < h; y += 1) line(0, y, w, y);
+          wipe(...dark).ink(...blocksColors[letter]);
+          const nh = Math.floor(lerp(0, 32, (playIndex + 1) / plays.length));
+          for (let y = 0; y < nh; y += 1) line(0, y, width, y);
         });
       }
 
@@ -481,7 +470,7 @@ export function beat({
 
           // Fill block up with a darkened version of its color.
           if (nextPlays.length > 1) {
-            blocks[nextLetter].texture = pixels(32, 32, () => {
+            blocks[nextLetter].texture = painting(32, 32, ({ wipe }) => {
               const dark = blocksColors[nextLetter].map((n) => lerp(0, n, 0.5));
               wipe(...dark);
             });

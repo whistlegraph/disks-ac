@@ -76,7 +76,17 @@ function boot({
 }
 
 // 🎨 Paint (Runs once per display refresh rate)
-function paint({ pen, pan, unpan, grid, line, pixels, wipe, ink, paintCount }) {
+function paint({
+  pen,
+  pan,
+  unpan,
+  grid,
+  line,
+  painting,
+  wipe,
+  ink,
+  paintCount,
+}) {
   if (!needsPaint) return false;
 
   // A. Grid
@@ -91,9 +101,9 @@ function paint({ pen, pan, unpan, grid, line, pixels, wipe, ink, paintCount }) {
   if (lines.length > 0) {
     grid(
       g,
-      pixels(g.box.w, g.box.h, () => {
-        ink(colors.lines);
-        lines.forEach((l) => line(...l));
+      painting(g.box.w, g.box.h, (p) => {
+        p.ink(colors.lines);
+        lines.forEach((l) => p.line(...l));
       })
     );
   }

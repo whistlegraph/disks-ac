@@ -20,7 +20,7 @@ const { max, min } = Math;
 // Design
 const colors = {
   notes: {
-    a: [10],
+    a: [10], // [255, 0, 0] // Red
     b: [30],
     c: [50],
     d: [70],
