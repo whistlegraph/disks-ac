@@ -2,6 +2,8 @@
 // A tool for composing, playing, and following along with 12 tones.
 // Designed in collaboration w/ Oliver Laumann + Mija Milovic
 
+// https://github.com/uNetworking/uWebSockets
+
 // *Current*
 // TODO: Make drawings for the toolbar and button symbols and set them.
 //       +-
